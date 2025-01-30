@@ -57,10 +57,16 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
+      // res.cookie("auth_token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // Secure only in production
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
+      // });
       res.cookie("auth_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Secure only in production
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+        secure: false, // Secure only in production
+        sameSite: "none", // Adjust for development
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
