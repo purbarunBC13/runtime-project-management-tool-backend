@@ -63,10 +63,11 @@ export const loginUser = async (req, res) => {
       //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
       //   maxAge: 24 * 60 * 60 * 1000, // 1 day
       // });
+
       res.cookie("auth_token", token, {
         httpOnly: true,
-        secure: false, // Secure only in production
-        sameSite: "none", // Adjust for development
+        secure: true, // Secure only in production
+        sameSite: "None", // Adjust for development
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       });
 
