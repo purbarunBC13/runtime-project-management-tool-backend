@@ -21,7 +21,7 @@ const whitelist = process.env.WHITE_LIST;
 app.use(
   cors({
     origin: function (origin, callback) {
-      logger.info(`Origin: ${origin}`);
+      console.log("origin", origin);
       if (!origin) {
         return callback(null, true);
       }

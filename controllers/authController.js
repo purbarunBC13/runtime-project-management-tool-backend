@@ -61,8 +61,6 @@ export const loginUser = async (req, res) => {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        crossDomain: true,
-        crossSite: true,
         maxAge,
       });
 
