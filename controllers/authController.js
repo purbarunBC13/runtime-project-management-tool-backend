@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 import User from "../models/userSchema.js";
 const maxAge = 3 * 24 * 60 * 60 * 1000;
 export const loginUser = async (req, res) => {
-  
   try {
     const response = await loginService(req.body);
 
@@ -65,11 +64,15 @@ export const loginUser = async (req, res) => {
       //   maxAge: 24 * 60 * 60 * 1000, // 1 day
       // });
 
+      // TODO: Check if this works in localhost
+      // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: true,
-        sameSite: 'none',
-        maxAge
+        sameSite: "none",
+        domain: "localhost", // When deploying Frontend, change to the domain name of The Frontend
+        maxAge: 24 * 60 * 60 * 1000,
+        path: "/",
       });
 
       return ResponseHandler.success(res, "User logged in successfully");
