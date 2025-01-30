@@ -4,6 +4,7 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 import {
   getTaskByStatus,
   getTaskPerProject,
+  getWorkDurationByProject,
 } from "../controllers/analyticsController.js";
 
 const analyticsRouter = express.Router();
@@ -22,4 +23,10 @@ analyticsRouter.get(
   getTaskPerProject
 );
 
+analyticsRouter.get(
+  "/project-work-duration",
+  verifyToken,
+  checkPermission("read_analytics"),
+  getWorkDurationByProject
+);
 export default analyticsRouter;

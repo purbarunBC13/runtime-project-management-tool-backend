@@ -85,8 +85,8 @@ export const getTaskPerProject = async (req, res) => {
       totalTasks: task.count,
     }));
 
-    const totalTasks = responsePayload.reduce(
-      (acc, curr) => acc + curr.count,
+    const total = responsePayload.reduce(
+      (acc, curr) => acc + curr.totalTasks,
       0
     );
 
@@ -95,7 +95,69 @@ export const getTaskPerProject = async (req, res) => {
       "Task per project fetched successfully",
       {
         tasks: responsePayload,
-        totalTasks,
+        total,
+      }
+    );
+  } catch (error) {
+    return ResponseHandler.error(res, error.message);
+  }
+};
+
+export const getWorkDurationByProject = async (req, res) => {
+  try {
+    const userName = req.query.userName;
+    if (!userName) {
+      return ResponseHandler.error(res, "User name is required", 400);
+    }
+
+    const user = await User.findOne({ name: userName }, { _id: 1 });
+
+    if (!user) {
+      return ResponseHandler.error(res, "User not found", 404);
+    }
+
+    const tasks = await Task.aggregate([
+      { $match: { user: user._id } },
+      {
+        $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "project",
+        },
+      },
+      { $unwind: "$project" },
+      {
+        $group: {
+          _id: "$project.projectName",
+          totalDuration: {
+            $sum: {
+              $subtract: [
+                { $toDate: "$finishTime" },
+                { $toDate: "$startTime" },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const responsePayload = tasks.map((task) => {
+      const durationMs = task.totalDuration;
+      const hours = Math.ceil(durationMs / (1000 * 60 * 60));
+      // const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+      return {
+        projectName: task._id,
+        duration: hours,
+      };
+    });
+
+    return ResponseHandler.success(
+      res,
+      "Work duration by project fetched successfully",
+      {
+        tasks: responsePayload,
       }
     );
   } catch (error) {
