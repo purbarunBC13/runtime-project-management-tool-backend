@@ -51,6 +51,10 @@ export const getTaskPerProject = async (req, res) => {
   try {
     const userName = req.query.userName;
 
+    if (!userName) {
+      return ResponseHandler.error(res, "User name is required", 400);
+    }
+
     const userId = await User.findOne({ name: userName }, { _id: 1 });
 
     if (!userId) {
@@ -60,8 +64,17 @@ export const getTaskPerProject = async (req, res) => {
     const tasks = await Task.aggregate([
       { $match: { user: userId._id } },
       {
+        $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "project",
+        },
+      },
+      { $unwind: "$project" },
+      {
         $group: {
-          _id: "$project",
+          _id: "$project.projectName",
           count: { $sum: 1 },
         },
       },

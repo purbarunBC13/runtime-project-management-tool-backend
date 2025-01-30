@@ -11,7 +11,7 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import ResponseHandler from "./utils/responseHandler.js";
 import expressRateLimit from "express-rate-limit";
-import "colors/index.js";
+// import "colors/index.js";
 
 const app = express();
 
@@ -87,28 +87,28 @@ app.use("/api/v1/analytics", analyticsRoutes);
 //* Connect to MongoDB
 connectDB()
   .then(() => {
-    console.log("Connected to MongoDB".yellow);
+    console.log("Connected to MongoDB");
   })
   .catch((error) => {
-    console.log(`MongoDB connection error: ${error}`.red);
+    console.log(`MongoDB connection error: ${error}`);
     process.exit(1);
   });
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`.blue);
+  console.log(`Server running on port ${PORT}`);
 });
 
 // NOTE: Handling the unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
-  console.log(`Shutting the server down: ${err.message}`.red);
+  console.log(`Shutting the server down: ${err.message}`);
   // NOTE: Closing the server and exiting the process
   server.close(() => process.exit(1));
 });
 
 // NOTE: Handling the unhandled exceptions
 process.on("uncaughtException", (err, promise) => {
-  console.log(`Shutting the server down: ${err.message}`.red);
+  console.log(`Shutting the server down: ${err.message}`);
   // NOTE: Closing the server and exiting the process
   server.close(() => process.exit(1));
 });

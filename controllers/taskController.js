@@ -147,9 +147,9 @@ export const getTasksByUserId = async (req, res) => {
       return ResponseHandler.error(res, "User not found", 404);
     }
 
-    const totalTasks = await Task.find({ user: user._id }).populate(
-      "creator_id user project service"
-    );
+    const totalTasks = await Task.find({ user: user._id })
+      .populate("creator_id user project service")
+      .sort({ date: -1 });
 
     const tasks = totalTasks.slice(limit * (page - 1), limit * page);
 
