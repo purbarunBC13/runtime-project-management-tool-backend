@@ -68,7 +68,7 @@ export const loginUser = async (req, res) => {
         httpOnly: true,
         secure: true, // Secure only in production
         sameSite: "None", // Adjust for development
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        maxAge: 10 * 24 * 60 * 60 * 1000, // 1 day
       });
 
       return ResponseHandler.success(res, "User logged in successfully");
