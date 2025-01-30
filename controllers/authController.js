@@ -16,7 +16,7 @@ export const loginUser = async (req, res) => {
       };
 
       const token = jwt.sign(userPayload, process.env.JWT_SECRET, {
-        expiresIn: "1d",
+        expiresIn: '2d',
       });
 
       const existingUser = await User.findOne({
@@ -93,6 +93,7 @@ export const loginUser = async (req, res) => {
 };
 
 export const logoutUser = async (req, res) => {
+  // console.log("Logging out user");
   try {
     res.clearCookie("auth_token");
     return ResponseHandler.success(res, "User logged out successfully");
