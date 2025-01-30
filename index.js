@@ -60,7 +60,7 @@ app.get("/", (req, res) => {
   return ResponseHandler.success(res, "API is running");
 });
 
-app.get("/fevicon.ico", (req, res) => {
+app.get("/favicon.ico", (req, res) => {
   return ResponseHandler.success(res, "Fevicon Checked");
 });
 
