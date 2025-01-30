@@ -84,3 +84,18 @@ export const loginUser = async (req, res) => {
     );
   }
 };
+
+export const logoutUser = async (req, res) => {
+  try {
+    res.clearCookie("auth_token");
+    return ResponseHandler.success(res, "User logged out successfully");
+  } catch (error) {
+    logger.error("Error during logout:", error);
+    return ResponseHandler.error(
+      res,
+      "Failed logging out user",
+      500,
+      error.message
+    );
+  }
+};
