@@ -31,11 +31,7 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Access-Control-Allow-Origin",
-    ],
+    allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
   })
@@ -61,11 +57,11 @@ app.use(morgan("dev"));
 
 //* Routes
 app.get("/", (req, res) => {
-  ResponseHandler.success(res, "API is running");
+  return ResponseHandler.success(res, "API is running");
 });
 
 app.get("/fevicon.ico", (req, res) => {
-  res.status(204);
+  return ResponseHandler.success(res, "Fevicon Checked");
 });
 
 import taskRoutes from "./routers/taskRouter.js";

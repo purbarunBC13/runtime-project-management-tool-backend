@@ -3,9 +3,8 @@ import { loginService } from "../services/authServices.js";
 import { logger } from "../utils/logger.js";
 import jwt from "jsonwebtoken";
 import User from "../models/userSchema.js";
-const maxAge = 3 * 24 * 60 * 60 * 1000;
+const maxAge = 24 * 60 * 60 * 1000;
 export const loginUser = async (req, res) => {
-  
   try {
     const response = await loginService(req.body);
 
@@ -58,18 +57,12 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
-      // res.cookie("auth_token", token, {
-      //   httpOnly: true,
-      //   secure: process.env.NODE_ENV === "production", // Secure only in production
-      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
-      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
-      // });
-
       res.cookie("auth_token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        domain: "localhost",
+        maxAge,
       });
 
       return ResponseHandler.success(res, "User logged in successfully");
