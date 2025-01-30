@@ -3,8 +3,9 @@ import { loginService } from "../services/authServices.js";
 import { logger } from "../utils/logger.js";
 import jwt from "jsonwebtoken";
 import User from "../models/userSchema.js";
-
+const maxAge = 3 * 24 * 60 * 60 * 1000;
 export const loginUser = async (req, res) => {
+  
   try {
     const response = await loginService(req.body);
 
@@ -16,7 +17,7 @@ export const loginUser = async (req, res) => {
       };
 
       const token = jwt.sign(userPayload, process.env.JWT_SECRET, {
-        expiresIn: '2d',
+        expiresIn: maxAge,
       });
 
       const existingUser = await User.findOne({
@@ -68,7 +69,7 @@ export const loginUser = async (req, res) => {
         //httpOnly: true,
         secure: true, // Secure only in production
         sameSite: 'none', // Adjust for development
-        maxAge: 10 * 24 * 60 * 60 * 1000, // 1 day
+        maxAge
       });
 
       return ResponseHandler.success(res, "User logged in successfully");
