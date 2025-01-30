@@ -53,6 +53,7 @@ app.use(
     },
   })
 );
+app.set("trust proxy", true);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -61,6 +62,10 @@ app.use(morgan("dev"));
 //* Routes
 app.get("/", (req, res) => {
   ResponseHandler.success(res, "API is running");
+});
+
+app.get("/fevicon.ico", (req, res) => {
+  res.status(204);
 });
 
 import taskRoutes from "./routers/taskRouter.js";

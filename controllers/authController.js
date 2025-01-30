@@ -66,9 +66,9 @@ export const loginUser = async (req, res) => {
       // });
 
       res.cookie("auth_token", token, {
-        //httpOnly: true,
-        secure: true, // Secure only in production
-        sameSite: 'none', // Adjust for development
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
         maxAge
       });
 
