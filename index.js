@@ -39,7 +39,7 @@ app.use(
       "Content-Type",
       "Authorization",
       "Access-Control-Allow-Origin",
-      "application/json",
+      "Access-Control-Allow-Credentials",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
