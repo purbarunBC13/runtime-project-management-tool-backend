@@ -10,7 +10,6 @@ import connectDB from "./config/db.config.js";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import ResponseHandler from "./utils/responseHandler.js";
-import expressRateLimit from "express-rate-limit";
 // import "colors/index.js";
 
 const app = express();
@@ -94,8 +93,6 @@ import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
 app.use("/api/v1/projectTypeDesc", projectTypeDescRoutes);
 
 import analyticsRoutes from "./routers/analyticsRouter.js";
-import session from "express-session";
-import MongoStore from "connect-mongo";
 app.use("/api/v1/analytics", analyticsRoutes);
 
 //* Connect to MongoDB
