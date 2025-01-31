@@ -5,23 +5,15 @@ dotenv.config({
 
 import express from "express";
 import cors from "cors";
+import { logger } from "./utils/logger.js";
 import connectDB from "./config/db.config.js";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import ResponseHandler from "./utils/responseHandler.js";
 import expressRateLimit from "express-rate-limit";
-import session from "express-session";
-import MongoStore from "connect-mongo";
 // import "colors/index.js";
 
 const app = express();
-
-app.set("trust proxy", true);
-app.use(express.json());
-app.use(cookieParser());
-
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("dev"));
 
 const whitelist = process.env.WHITE_LIST;
 
@@ -44,7 +36,6 @@ app.use(
     credentials: true,
   })
 );
-
 app.use(
   expressRateLimit({
     windowMs: 15 * 60 * 1000,
@@ -58,25 +49,11 @@ app.use(
     },
   })
 );
-
-app.use(
-  session({
-    name: "auth_token",
-    secret: process.env.SESSION_SECRET || "supersecretkey", // Use a strong secret key
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI, // Your MongoDB connection string
-      collectionName: "sessions",
-    }),
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Secure cookies in production
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    },
-  })
-);
+app.set("trust proxy", true);
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan("dev"));
 
 //* Routes
 app.get("/", (req, res) => {

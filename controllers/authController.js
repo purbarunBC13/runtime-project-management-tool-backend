@@ -16,10 +16,8 @@ export const loginUser = async (req, res) => {
       };
 
       const token = jwt.sign(userPayload, process.env.JWT_SECRET, {
-        expiresIn: "24h",
+        expiresIn: maxAge,
       });
-
-      console.log("Token:", token);
 
       const existingUser = await User.findOne({
         externalId: userPayload.externalId,
@@ -59,12 +57,25 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
-      // ✅ Store the token in session
-      req.session.jwt = token;
+      // res.cookie("auth_token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // Secure only in production
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
+      // });
 
-      return ResponseHandler.success(res, "User logged in successfully", {
-        token,
+      // TODO: Check if this works in localhost
+      // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        domain: "localhost", // When deploying Frontend, change to the domain name of The Frontend
+        maxAge: 24 * 60 * 60 * 1000,
+        path: "/",
       });
+
+      return ResponseHandler.success(res, "User logged in successfully");
     } else {
       console.log(response.message.data.error);
       return ResponseHandler.error(
@@ -86,19 +97,10 @@ export const loginUser = async (req, res) => {
 };
 
 export const logoutUser = async (req, res) => {
+  // console.log("Logging out user");
   try {
-    req.session.destroy((err) => {
-      if (err) {
-        logger.error("Error destroying session:", err);
-        return ResponseHandler.error(
-          res,
-          "Failed logging out user",
-          500,
-          err.message
-        );
-      }
-      return ResponseHandler.success(res, "User logged out successfully");
-    });
+    res.clearCookie("auth_token");
+    return ResponseHandler.success(res, "User logged out successfully");
   } catch (error) {
     logger.error("Error during logout:", error);
     return ResponseHandler.error(

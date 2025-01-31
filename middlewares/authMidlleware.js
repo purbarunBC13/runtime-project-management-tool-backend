@@ -2,9 +2,7 @@ import jwt from "jsonwebtoken";
 import ResponseHandler from "../utils/responseHandler.js";
 
 export const verifyToken = (req, res, next) => {
-  console.log("req.session.jwt", req.session.jwt);
-  const token = req.session.jwt;
-
+  const token = req.cookies.auth_token;
   if (!token) {
     return ResponseHandler.error(res, "You are unauthorized", 401);
   }
