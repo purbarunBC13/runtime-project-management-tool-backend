@@ -63,25 +63,11 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
-      // res.cookie("auth_token", token, {
-      //   httpOnly: true,
-      //   secure: process.env.NODE_ENV === "production", // Secure only in production
-      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
-      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
-      // });
-
       // TODO: Check if this works in localhost
-      // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production", // Secure only in production
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
-        domain:
-          process.env.NODE_ENV === "production"
-            ? "runtime-project-management-tool-frontend.vercel.app"
-            : "localhost",
-        maxAge: 24 * 60 * 60 * 1000,
-        path: "/",
       });
 
       return ResponseHandler.success(res, "User logged in successfully", {
@@ -124,5 +110,28 @@ export const logoutUser = async (req, res) => {
       500,
       error.message
     );
+  }
+};
+
+export const getMe = async (req, res) => {
+  try {
+    const token = req.cookies.auth_token;
+    if (!token) {
+      return ResponseHandler.error(res, "Not authenticated", 401);
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ externalId: decoded.externalId });
+
+    if (!user) {
+      return ResponseHandler.error(res, "User not found", 404);
+    }
+
+    return ResponseHandler.success(res, "User authenticated", {
+      name: user.name,
+      role: user.roleId === 1 ? "Admin" : "User",
+    });
+  } catch (error) {
+    return ResponseHandler.error(res, "Invalid token", 401);
   }
 };

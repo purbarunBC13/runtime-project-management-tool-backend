@@ -20,26 +20,21 @@ const whitelist = process.env.WHITE_LIST;
 //* Middlewares
 app.use(
   cors({
-    // origin: function (origin, callback) {
-    //   console.log("origin", origin);
-    //   if (!origin) {
-    //     return callback(null, true);
-    //   }
-    //   if (whitelist.indexOf(origin) !== -1) {
-    //     callback(null, true);
-    //   } else {
-    //     callback(new Error("Not allowed by CORS"));
-    //   }
-    // },
-    origin: [
-      "http://localhost:3000",
-      "https://runtime-project-management-tool-frontend.vercel.app",
-    ],
+    origin: function (origin, callback) {
+      console.log("origin", origin);
+      if (!origin) {
+        return callback(null, true);
+      }
+      if (whitelist.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     allowedHeaders: [
       "Content-Type",
       "Authorization",
       "Access-Control-Allow-Origin",
-      "Access-Control-Allow-Credentials",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
@@ -50,6 +45,19 @@ app.set("trust proxy", true);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      dbName: "session",
+    }),
+  })
+);
+
 app.use(morgan("dev"));
 
 //* Routes
@@ -80,6 +88,8 @@ import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
 app.use("/api/v1/projectTypeDesc", projectTypeDescRoutes);
 
 import analyticsRoutes from "./routers/analyticsRouter.js";
+import session from "express-session";
+import MongoStore from "connect-mongo";
 app.use("/api/v1/analytics", analyticsRoutes);
 
 //* Connect to MongoDB
