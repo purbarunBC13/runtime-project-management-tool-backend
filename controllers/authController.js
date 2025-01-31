@@ -63,12 +63,23 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
+      // res.cookie("auth_token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // Secure only in production
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
+      // });
+
       // TODO: Check if this works in localhost
       // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
-        // httpOnly: true, //Test without this
-        // secure: true,
-        sameSite: "none",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // Secure only in production
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+        domain:
+          process.env.NODE_ENV === "production"
+            ? "runtime-project-management-tool-frontend.vercel.app"
+            : "localhost",
         maxAge: 24 * 60 * 60 * 1000,
         path: "/",
       });

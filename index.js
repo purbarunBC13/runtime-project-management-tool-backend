@@ -20,18 +20,27 @@ const whitelist = process.env.WHITE_LIST;
 //* Middlewares
 app.use(
   cors({
-    origin: function (origin, callback) {
-      console.log("origin", origin);
-      if (!origin) {
-        return callback(null, true);
-      }
-      if (whitelist.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    allowedHeaders: ["Content-Type", "Authorization"],
+    // origin: function (origin, callback) {
+    //   console.log("origin", origin);
+    //   if (!origin) {
+    //     return callback(null, true);
+    //   }
+    //   if (whitelist.indexOf(origin) !== -1) {
+    //     callback(null, true);
+    //   } else {
+    //     callback(new Error("Not allowed by CORS"));
+    //   }
+    // },
+    origin: [
+      "http://localhost:3000",
+      "https://runtime-project-management-tool-frontend.vercel.app",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Access-Control-Allow-Origin",
+      "application/json",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     credentials: true,
   })
