@@ -16,8 +16,10 @@ export const loginUser = async (req, res) => {
       };
 
       const token = jwt.sign(userPayload, process.env.JWT_SECRET, {
-        expiresIn: maxAge,
+        expiresIn: "24h",
       });
+
+      console.log("Token:", token);
 
       const existingUser = await User.findOne({
         externalId: userPayload.externalId,
@@ -57,16 +59,7 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
-      // TODO: Check if this works in localhost
-      // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
-      // res.cookie("auth_token", token, {
-      //   httpOnly: true,
-      //   secure: true,
-      //   sameSite: "none",
-      //   maxAge: 24 * 60 * 60 * 1000,
-      //   path: "/",
-      // });
-
+      // ✅ Store the token in session
       req.session.jwt = token;
 
       return ResponseHandler.success(res, "User logged in successfully", {
@@ -93,10 +86,19 @@ export const loginUser = async (req, res) => {
 };
 
 export const logoutUser = async (req, res) => {
-  // console.log("Logging out user");
   try {
-    res.clearCookie("auth_token");
-    return ResponseHandler.success(res, "User logged out successfully");
+    req.session.destroy((err) => {
+      if (err) {
+        logger.error("Error destroying session:", err);
+        return ResponseHandler.error(
+          res,
+          "Failed logging out user",
+          500,
+          err.message
+        );
+      }
+      return ResponseHandler.success(res, "User logged out successfully");
+    });
   } catch (error) {
     logger.error("Error during logout:", error);
     return ResponseHandler.error(
