@@ -73,7 +73,7 @@ export const loginUser = async (req, res) => {
       // TODO: Check if this works in localhost
       // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
-        httpOnly: true, //Test without this
+        // httpOnly: true, //Test without this
         secure: true,
         sameSite: "none",
         maxAge: 24 * 60 * 60 * 1000,
