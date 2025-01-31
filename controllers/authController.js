@@ -64,11 +64,13 @@ export const loginUser = async (req, res) => {
       }
 
       // TODO: Check if this works in localhost
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Secure only in production
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
-      });
+      // res.cookie("auth_token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // Secure only in production
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+      // });
+
+      req.session.jwt = token;
 
       return ResponseHandler.success(res, "User logged in successfully", {
         token,
