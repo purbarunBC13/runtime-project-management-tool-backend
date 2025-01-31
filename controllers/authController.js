@@ -76,7 +76,6 @@ export const loginUser = async (req, res) => {
         httpOnly: true, //Test without this
         secure: true,
         sameSite: "none",
-        domain: "localhost", // When deploying Frontend, change to the domain name of The Frontend
         maxAge: 24 * 60 * 60 * 1000,
         path: "/",
       });
