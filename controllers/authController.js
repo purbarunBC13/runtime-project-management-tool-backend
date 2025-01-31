@@ -57,11 +57,22 @@ export const loginUser = async (req, res) => {
         logger.info("User already exists in the database");
       }
 
+      // res.cookie("auth_token", token, {
+      //   httpOnly: true,
+      //   secure: process.env.NODE_ENV === "production", // Secure only in production
+      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+      //   maxAge: 24 * 60 * 60 * 1000, // 1 day
+      // });
+
+      // TODO: Check if this works in localhost
+      // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge,
+        secure: true,
+        sameSite: "none",
+        domain: "localhost", // When deploying Frontend, change to the domain name of The Frontend
+        maxAge: 24 * 60 * 60 * 1000,
+        path: "/",
       });
 
       return ResponseHandler.success(res, "User logged in successfully");
