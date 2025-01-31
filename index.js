@@ -11,6 +11,8 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import ResponseHandler from "./utils/responseHandler.js";
 import expressRateLimit from "express-rate-limit";
+import session from "express-session";
+import MongoStore from "connect-mongo";
 // import "colors/index.js";
 
 const app = express();
@@ -49,6 +51,26 @@ app.use(
     },
   })
 );
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+
+    cookie: {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    },
+
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      dbName: process.env.MONGO_DB,
+    }),
+  })
+);
+
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
