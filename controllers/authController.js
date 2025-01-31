@@ -72,11 +72,15 @@ export const loginUser = async (req, res) => {
 
       req.session.jwt = token;
 
-      return ResponseHandler.success(res, "User logged in successfully", {
-        token,
-        user: {
-          name: response.data.name,
-          role: response.data.role_id === 1 ? "Admin" : "User",
+      return res.status(200).json({
+        status: "success",
+        message: "User logged in successfully",
+        data: {
+          token,
+          user: {
+            name: response.data.name,
+            role: response.data.role_id === 1 ? "Admin" : "User",
+          },
         },
       });
     } else {
