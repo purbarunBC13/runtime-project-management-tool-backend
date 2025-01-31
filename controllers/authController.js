@@ -19,6 +19,12 @@ export const loginUser = async (req, res) => {
         expiresIn: maxAge,
       });
 
+      if (token) {
+        console.log("jwt secret", process.env.JWT_SECRET);
+        console.log("maxage", maxAge);
+        console.log("userPayload", userPayload);
+      }
+
       const existingUser = await User.findOne({
         externalId: userPayload.externalId,
       });
@@ -67,7 +73,7 @@ export const loginUser = async (req, res) => {
       // TODO: Check if this works in localhost
       // Ekta jinis research korlam, Maybe deployed backend deployed frontend er cookies er sathe kaj korbe, tai localhost er jonno ekta workaround lagbe (domain: localhost)
       res.cookie("auth_token", token, {
-        httpOnly: true,
+        httpOnly: true, //Test without this
         secure: true,
         sameSite: "none",
         domain: "localhost", // When deploying Frontend, change to the domain name of The Frontend

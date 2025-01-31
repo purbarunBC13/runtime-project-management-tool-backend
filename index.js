@@ -36,19 +36,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(
-  expressRateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
-    handler: (req, res, next) => {
-      return ResponseHandler.error(
-        res,
-        "You have exceeded the 100 requests in 15 minutes limit!",
-        429
-      );
-    },
-  })
-);
+
 app.set("trust proxy", true);
 app.use(express.json());
 app.use(cookieParser());
