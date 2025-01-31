@@ -71,6 +71,7 @@ export const loginUser = async (req, res) => {
         secure: true,
         sameSite: "none",
         maxAge: 24 * 60 * 60 * 1000,
+        domain: "runtime-project-management-tool-frontend.vercel.app",
         path: "/",
       });
 
