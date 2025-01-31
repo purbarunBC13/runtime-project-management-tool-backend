@@ -19,12 +19,6 @@ export const loginUser = async (req, res) => {
         expiresIn: maxAge,
       });
 
-      if (token) {
-        console.log("jwt secret", process.env.JWT_SECRET);
-        console.log("maxage", maxAge);
-        console.log("userPayload", userPayload);
-      }
-
       const existingUser = await User.findOne({
         externalId: userPayload.externalId,
       });
@@ -64,13 +58,14 @@ export const loginUser = async (req, res) => {
       }
 
       // TODO: Check if this works in localhost
-      // res.cookie("auth_token", token, {
-      //   httpOnly: true,
-      //   secure: process.env.NODE_ENV === "production", // Secure only in production
-      //   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
-      // });
+      res.cookie("auth_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production", // Secure only in production
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for development
+        maxAge: maxAge,
+      });
 
-      req.session.jwt = token;
+      // req.session.jwt = token;
 
       return res.status(200).json({
         status: "success",
@@ -119,25 +114,25 @@ export const logoutUser = async (req, res) => {
   }
 };
 
-export const getMe = async (req, res) => {
-  try {
-    const token = req.cookies.auth_token;
-    if (!token) {
-      return ResponseHandler.error(res, "Not authenticated", 401);
-    }
+// export const getMe = async (req, res) => {
+//   try {
+//     const token = req.cookies.auth_token;
+//     if (!token) {
+//       return ResponseHandler.error(res, "Not authenticated", 401);
+//     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ externalId: decoded.externalId });
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const user = await User.findOne({ externalId: decoded.externalId });
 
-    if (!user) {
-      return ResponseHandler.error(res, "User not found", 404);
-    }
+//     if (!user) {
+//       return ResponseHandler.error(res, "User not found", 404);
+//     }
 
-    return ResponseHandler.success(res, "User authenticated", {
-      name: user.name,
-      role: user.roleId === 1 ? "Admin" : "User",
-    });
-  } catch (error) {
-    return ResponseHandler.error(res, "Invalid token", 401);
-  }
-};
+//     return ResponseHandler.success(res, "User authenticated", {
+//       name: user.name,
+//       role: user.roleId === 1 ? "Admin" : "User",
+//     });
+//   } catch (error) {
+//     return ResponseHandler.error(res, "Invalid token", 401);
+//   }
+// };
