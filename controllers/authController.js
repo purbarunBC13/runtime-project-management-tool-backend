@@ -74,7 +74,9 @@ export const loginUser = async (req, res) => {
         path: "/",
       });
 
-      return ResponseHandler.success(res, "User logged in successfully");
+      return ResponseHandler.success(res, "User logged in successfully",{
+        token
+      });
     } else {
       console.log(response.message.data.error);
       return ResponseHandler.error(
