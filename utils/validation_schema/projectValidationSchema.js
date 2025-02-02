@@ -29,7 +29,7 @@ export const projectValidationSchema = z.object({
       message: "Project description cannot be empty",
     }),
 
-  projectDate: z.date({
+  projectDate: z.string({
     message: "Project date must be a valid date",
   }),
 
