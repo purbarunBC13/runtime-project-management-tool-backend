@@ -86,6 +86,14 @@ export const getAllServices = async (req, res) => {
           updatedAt: 1,
         },
       },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $addFields: {
+          project: "$project.projectName",
+        },
+      },
     ]);
 
     if (services.length === 0) {
