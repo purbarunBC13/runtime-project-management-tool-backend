@@ -29,9 +29,9 @@ export const projectValidationSchema = z.object({
       message: "Project description cannot be empty",
     }),
 
-  projectDate: z.string({
-    message: "Project date must be a valid date",
-  }),
+  projectDate: z
+    .string()
+    .refine((val) => !isNaN(Date.parse(val)), "Invalid date format."),
 
   projectPeriod: z
     .number({
