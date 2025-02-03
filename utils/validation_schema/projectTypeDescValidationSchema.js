@@ -25,13 +25,5 @@ export const projectTypeDescValidationSchema = z.object({
     .string({
       message: "Location must be a string",
     })
-    .min(5, {
-      message: "Location must be at least 5 characters long",
-    })
-    .max(100, {
-      message: "Location must be at most 100 characters long",
-    })
-    .nonempty({
-      message: "Location cannot be empty",
-    }),
+    .optional(),
 });

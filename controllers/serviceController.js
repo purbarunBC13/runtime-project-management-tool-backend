@@ -64,8 +64,6 @@ export const getAllServices = async (req, res) => {
 
     const services = await Service.aggregate([
       { $match: filter },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "projects",
@@ -94,6 +92,8 @@ export const getAllServices = async (req, res) => {
           project: "$project.projectName",
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     if (services.length === 0) {
