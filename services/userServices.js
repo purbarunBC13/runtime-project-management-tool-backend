@@ -22,7 +22,7 @@ export const getAllUsersService = async () => {
   const AUTH_SERVICE_BASE_URL = process.env.AUTH_SERVICE_BASE_URL;
   try {
     const response = await axios.post(`${AUTH_SERVICE_BASE_URL}/users_list`);
-    logger.info("All users data", response.data);
+    // logger.info("All users data", response.data);
     return response.data;
   } catch (error) {
     logger.error(error || "User service error");

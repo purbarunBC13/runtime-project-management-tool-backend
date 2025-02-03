@@ -9,7 +9,11 @@ export const getUser = async (req, res) => {
   try {
     const response = await getUserService(req.externalId);
     if (response.status === 200) {
-      return ResponseHandler.success(res, response.data);
+      return ResponseHandler.success(
+        res,
+        "User fetched successfully",
+        response.data
+      );
     } else {
       return ResponseHandler.error(res, response.data, response.status);
     }
@@ -20,14 +24,31 @@ export const getUser = async (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+  const userName = req.query.userName;
+
   try {
     const response = await getAllUsersService();
     if (response.status === 200) {
-      return ResponseHandler.success(
-        res,
-        "Users fetched successfully",
-        response.data
-      );
+      const users = response.data.slice(skip, skip + limit).filter((user) => {
+        if (userName) {
+          return user.name.toLowerCase().includes(userName.toLowerCase());
+        }
+        return true;
+      });
+      response.data = users;
+      const paginationData = {
+        currentPage: page,
+        totalPages: Math.ceil(response.data.length / limit),
+        limit,
+        totalUsers: response.data.length,
+      };
+      return ResponseHandler.success(res, "Users fetched successfully", {
+        users,
+        paginationData,
+      });
     } else {
       return ResponseHandler.error(
         res,
