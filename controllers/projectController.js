@@ -85,7 +85,7 @@ export const getAllProjects = async (req, res) => {
     const totalProjects = await Project.countDocuments(filter);
     const totalPages = Math.ceil(totalProjects / limit);
 
-    const pagination = {
+    const paginationData = {
       currentPage: page,
       totalPages,
       totalProjects,
@@ -95,7 +95,7 @@ export const getAllProjects = async (req, res) => {
     return ResponseHandler.success(
       res,
       "All Projects",
-      { projects, pagination },
+      { projects, paginationData },
       200
     );
   } catch (error) {

@@ -31,6 +31,7 @@ export const getAllUsers = async (req, res) => {
 
   try {
     const response = await getAllUsersService();
+    const totalUsers = response.data.length;
     if (response.status === 200) {
       const users = response.data.slice(skip, skip + limit).filter((user) => {
         if (userName) {
@@ -43,7 +44,7 @@ export const getAllUsers = async (req, res) => {
         currentPage: page,
         totalPages: Math.ceil(response.data.length / limit),
         limit,
-        totalUsers: response.data.length,
+        totalUsers: totalUsers,
       };
       return ResponseHandler.success(res, "Users fetched successfully", {
         users,
