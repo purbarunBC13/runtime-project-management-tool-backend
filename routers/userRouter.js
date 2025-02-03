@@ -6,7 +6,7 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 const router = express.Router();
 
 router.post("/get-user", verifyToken, checkPermission("read_user"), getUser);
-router.post(
+router.get(
   "/get-all-users",
   verifyToken,
   checkPermission("read_users"),
