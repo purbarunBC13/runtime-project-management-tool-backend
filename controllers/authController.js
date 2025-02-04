@@ -101,7 +101,11 @@ export const loginUser = async (req, res) => {
 export const logoutUser = async (req, res) => {
   // console.log("Logging out user");
   try {
-    res.clearCookie("auth_token");
+    res.clearCookie("auth_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // Secure only in production
+      sameSite: process.env.NODE_ENV === "production" ? "None" : "lax", // Adjust for development
+    });
     return ResponseHandler.success(res, "User logged out successfully");
   } catch (error) {
     logger.error("Error during logout:", error);
