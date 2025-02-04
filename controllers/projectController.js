@@ -70,7 +70,7 @@ export const getAllProjects = async (req, res) => {
         }
       });
     } else {
-      sortOptions.projectDate = -1;
+      sortOptions.createdAt = -1;
     }
 
     const projects = await Project.find(filter)
