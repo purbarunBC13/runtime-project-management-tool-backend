@@ -1,5 +1,9 @@
 import express from "express";
-import { getUser, getAllUsers } from "../controllers/userController.js";
+import {
+  getUser,
+  getAllUsers,
+  getAllUserList,
+} from "../controllers/userController.js";
 import { verifyToken } from "../middlewares/authMidlleware.js";
 import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 
@@ -11,6 +15,13 @@ router.get(
   verifyToken,
   checkPermission("read_users"),
   getAllUsers
+);
+
+router.get(
+  "/get-user-list",
+  verifyToken,
+  checkPermission("read_user"),
+  getAllUserList
 );
 
 export default router;

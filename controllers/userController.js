@@ -63,3 +63,23 @@ export const getAllUsers = async (req, res) => {
     return ResponseHandler.error(res, "Failed to get all users", 500, error);
   }
 };
+
+export const getAllUserList = async (req, res) => {
+  try {
+    const response = await getAllUsersService();
+    if (response.status === 200) {
+      const users = response.data.map((user) => {
+        return {
+          label: user.name,
+          value: user.name,
+        };
+      });
+      return ResponseHandler.success(res, "All Users", users, 200);
+    } else {
+      return ResponseHandler.error(res, response.data, response.status);
+    }
+  } catch (error) {
+    logger.error("Error getting users:", error);
+    return ResponseHandler.error(res, "Failed to get users", 500, error);
+  }
+};
