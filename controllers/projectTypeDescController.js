@@ -71,6 +71,7 @@ export const getAllProjectTypeDesc = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
+    const totalTypeDesc = await ProjectTypeDesc.countDocuments(filter);
     if (response.length === 0) {
       return ResponseHandler.error(
         res,
@@ -78,10 +79,17 @@ export const getAllProjectTypeDesc = async (req, res) => {
         404
       );
     }
+
+    const paginationData = {
+      currentPage: page,
+      totalPages: Math.ceil(totalTypeDesc / limit),
+      limit,
+    };
+
     return ResponseHandler.success(
       res,
       "Project Type Description fetched successfully",
-      response
+      { response, paginationData }
     );
   } catch (error) {
     logger.error("Failed to get Project Type Description", error);

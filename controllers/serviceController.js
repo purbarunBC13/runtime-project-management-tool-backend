@@ -103,7 +103,7 @@ export const getAllServices = async (req, res) => {
     const totalServices = await Service.countDocuments(filter);
     const totalPages = Math.ceil(totalServices / limit);
 
-    const pagination = {
+    const paginationData = {
       currentPage: page,
       totalPages,
       totalServices,
@@ -113,7 +113,7 @@ export const getAllServices = async (req, res) => {
     return ResponseHandler.success(
       res,
       "All Services",
-      { services, pagination },
+      { services, paginationData },
       200
     );
   } catch (error) {
