@@ -42,7 +42,7 @@ export const getAllUsers = async (req, res) => {
       response.data = users;
       const paginationData = {
         currentPage: page,
-        totalPages: Math.ceil(response.data.length / limit),
+        totalPages: Math.ceil(totalUsers / limit),
         limit,
         totalUsers: totalUsers,
       };
