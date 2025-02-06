@@ -87,30 +87,48 @@ export const createTask = async (req, res) => {
 
 export const getAllTasks = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    // const page = parseInt(req.query.page) || 1;
+    // const limit = parseInt(req.query.limit) || 10;
 
-    const tasks = await Task.find()
-      .populate("creator_id user project service")
-      .skip(limit * (page - 1))
-      .limit(limit);
+    const projectName = req.query.projectName;
+
+    const filter = {};
+
+    if (projectName) {
+      const project = await Project.findOne({ projectName }, { _id: 1 });
+      if (!project) {
+        return ResponseHandler.error(res, "Project not found", 404);
+      }
+      filter.project = project._id;
+    }
+
+    const tasks = await Task.find(filter).populate(
+      "creator_id user project service"
+    );
+    // .skip(limit * (page - 1))
+    // .limit(limit);
 
     if (tasks.length === 0) {
       return ResponseHandler.error(res, "No tasks found", 404);
     }
 
-    const totalTasks = await Task.countDocuments();
-    const totalPages = Math.ceil(totalTasks / limit);
-    const paginationData = {
-      currentPage: page,
-      totalPages: totalPages,
-      totalTasks: totalTasks,
-    };
+    // const totalTasks = await Task.countDocuments();
+    // const totalPages = Math.ceil(totalTasks / limit);
+    // const paginationData = {
+    //   currentPage: page,
+    //   totalPages: totalPages,
+    //   totalTasks: totalTasks,
+    // };
+
+    // tasks.forEach((task) => {
+    //   console.log(task.project.projectName);
+    // });
 
     return ResponseHandler.success(
       res,
       "All tasks",
-      { tasks, paginationData },
+      // { tasks, paginationData },
+      tasks,
       200
     );
   } catch (error) {
