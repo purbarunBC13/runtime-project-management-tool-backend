@@ -125,6 +125,63 @@ export const getTasksByUserId = async (req, res) => {
     const userName = req.query.userName;
     const roleId = req.roleId;
 
+    let filter = {};
+
+    if (req.query.projectName) {
+      // const projectId = await Project.findOne(
+      //   {
+      //     projectName: {
+      //       $regex: req.query.projectName,
+      //       $options: "i",
+      //     },
+      //   },
+      //   { _id: 1 }
+      // );
+      const projectId = await Project.find(
+        {
+          projectName: {
+            $regex: req.query.projectName,
+            $options: "i",
+          },
+        },
+        { _id: 1 }
+      );
+      filter.project = projectId.map((project) => project._id);
+    }
+
+    if (req.query.serviceName) {
+      // const serviceId = await Service.findOne(
+      //   {
+      //     serviceName: {
+      //       $regex: req.query.serviceName,
+      //       $options: "i",
+      //     },
+      //   },
+      //   { _id: 1 }
+      // );
+      const serviceId = await Service.find(
+        {
+          serviceName: {
+            $regex: req.query.serviceName,
+            $options: "i",
+          },
+        },
+        { _id: 1 }
+      );
+      filter.service = serviceId.map((service) => service._id);
+    }
+
+    if (req.query.fromDate && req.query.toDate) {
+      filter.date = {
+        $gte: dateParser(req.query.fromDate),
+        $lte: dateParser(req.query.toDate),
+      };
+    }
+
+    if (req.query.status) {
+      filter.status = { $regex: req.query.status, $options: "i" };
+    }
+
     let user = null;
 
     if (roleId === 1) {
@@ -147,9 +204,25 @@ export const getTasksByUserId = async (req, res) => {
       return ResponseHandler.error(res, "User not found", 404);
     }
 
-    const totalTasks = await Task.find({ user: user._id })
+    filter.user = user._id;
+
+    const sortOptions = {};
+    if (req.query.sortBy) {
+      const sortFields = req.query.sortBy.split(",");
+      sortFields.forEach((field) => {
+        if (field.startsWith("-")) {
+          sortOptions[field.substring(1)] = -1;
+        } else {
+          sortOptions[field] = 1;
+        }
+      });
+    } else {
+      sortOptions.createdAt = -1;
+    }
+
+    const totalTasks = await Task.find(filter)
       .populate("creator_id user project service")
-      .sort({ date: -1 });
+      .sort(sortOptions);
 
     const tasks = totalTasks.slice(limit * (page - 1), limit * page);
 
@@ -163,6 +236,11 @@ export const getTasksByUserId = async (req, res) => {
       totalPages: totalPages,
       totalTasks: totalTasks.length,
     };
+
+    tasks.forEach((task) => {
+      console.log(task.project.projectName);
+    });
+
     return ResponseHandler.success(
       res,
       "All tasks",

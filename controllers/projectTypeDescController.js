@@ -56,15 +56,20 @@ export const getAllProjectTypeDesc = async (req, res) => {
       };
     }
 
-    if (req.query.projectName) {
-      const project = await Project.findOne({
-        projectName: req.query.projectName,
-      });
-      if (!project) {
-        return ResponseHandler.error(res, "Project not found", 404);
-      }
-      filter.project = project._id;
+    if (req.query.location) {
+      filter.location = { $regex: req.query.location, $options: "i" };
     }
+
+    // if (req.query.projectName) {
+    //   filter.project = { $regex: req.query.projectName, $options: "i" };
+    //   const project = await Project.findOne({
+    //     projectName: req.query.projectName,
+    //   });
+    //   if (!project) {
+    //     return ResponseHandler.error(res, "Project not found", 404);
+    //   }
+    //   filter.project = project._id;
+    // }
 
     const response = await ProjectTypeDesc.find(filter)
       .populate("project")

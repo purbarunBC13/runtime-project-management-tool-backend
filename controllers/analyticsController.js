@@ -4,9 +4,25 @@ import ResponseHandler from "../utils/responseHandler.js";
 
 export const getTaskByStatus = async (req, res) => {
   try {
+    let userId = null;
+    const roleId = req.roleId;
     const userName = req.query.userName;
 
-    const userId = await User.findOne({ name: userName }, { _id: 1 });
+    if (roleId === 1) {
+      userId = await User.findOne(
+        {
+          name: userName,
+        },
+        { _id: 1 }
+      );
+    } else {
+      userId = await User.findOne(
+        {
+          externalId: req.externalId,
+        },
+        { _id: 1 }
+      );
+    }
 
     if (!userId) {
       return ResponseHandler.error(res, "User not found", 404);
@@ -50,12 +66,24 @@ export const getTaskByStatus = async (req, res) => {
 export const getTaskPerProject = async (req, res) => {
   try {
     const userName = req.query.userName;
+    let userId = null;
+    const roleId = req.roleId;
 
-    if (!userName) {
-      return ResponseHandler.error(res, "User name is required", 400);
+    if (roleId === 1) {
+      userId = await User.findOne(
+        {
+          name: userName,
+        },
+        { _id: 1 }
+      );
+    } else {
+      userId = await User.findOne(
+        {
+          externalId: req.externalId,
+        },
+        { _id: 1 }
+      );
     }
-
-    const userId = await User.findOne({ name: userName }, { _id: 1 });
 
     if (!userId) {
       return ResponseHandler.error(res, "User not found", 404);
@@ -105,19 +133,32 @@ export const getTaskPerProject = async (req, res) => {
 
 export const getWorkDurationByProject = async (req, res) => {
   try {
+    let userId = null;
+    const roleId = req.roleId;
     const userName = req.query.userName;
-    if (!userName) {
-      return ResponseHandler.error(res, "User name is required", 400);
+
+    if (roleId === 1) {
+      userId = await User.findOne(
+        {
+          name: userName,
+        },
+        { _id: 1 }
+      );
+    } else {
+      userId = await User.findOne(
+        {
+          externalId: req.externalId,
+        },
+        { _id: 1 }
+      );
     }
 
-    const user = await User.findOne({ name: userName }, { _id: 1 });
-
-    if (!user) {
+    if (!userId) {
       return ResponseHandler.error(res, "User not found", 404);
     }
 
     const tasks = await Task.aggregate([
-      { $match: { user: user._id } },
+      { $match: { user: userId._id } },
       {
         $lookup: {
           from: "projects",

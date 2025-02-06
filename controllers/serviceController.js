@@ -50,6 +50,7 @@ export const getAllServices = async (req, res) => {
     }
 
     if (req.query.projectName) {
+      filter.project = { $regex: req.query.projectName, $options: "i" };
       const project = await Project.findOne({
         projectName: req.query.projectName,
       });
@@ -57,10 +58,7 @@ export const getAllServices = async (req, res) => {
         return ResponseHandler.error(res, "Project not found", 404);
       }
       filter.project = project._id;
-      //   console.log("Project found:", project);
     }
-
-    // console.log("Filter:", filter);
 
     const services = await Service.aggregate([
       { $match: filter },
