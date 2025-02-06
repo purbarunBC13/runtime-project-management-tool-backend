@@ -29,7 +29,13 @@ export const createProject = async (req, res) => {
 
 export const getAllProjectNames = async (req, res) => {
   try {
-    const projectNames = await Project.find({}, { projectName: 1, _id: 0 });
+    const projectNames = await Project.find(
+      {},
+      { projectName: 1, _id: 0 },
+      {
+        sort: { createdAt: -1 },
+      }
+    );
     const responsePayload = projectNames.map((project) => project.projectName);
     return ResponseHandler.success(
       res,

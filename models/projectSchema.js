@@ -29,7 +29,7 @@ const projectSchema = new mongoose.Schema(
     },
     projectType: {
       type: String,
-      required: true,
+      // required: true,
     },
     cost: {
       type: Number,

@@ -75,9 +75,7 @@ export const projectValidationSchema = z.object({
     .max(100, {
       message: "Project type must be at most 100 characters long",
     })
-    .nonempty({
-      message: "Project type cannot be empty",
-    }),
+    .optional(),
 
   cost: z
     .number({
