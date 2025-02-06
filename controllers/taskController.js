@@ -125,18 +125,23 @@ export const getTasksByUserId = async (req, res) => {
     const userName = req.query.userName;
     const roleId = req.roleId;
 
+    const sortOptions = {};
+    if (req.query.sortBy) {
+      const sortFields = req.query.sortBy.split(",");
+      sortFields.forEach((field) => {
+        if (field.startsWith("-")) {
+          sortOptions[field.substring(1)] = -1;
+        } else {
+          sortOptions[field] = 1;
+        }
+      });
+    } else {
+      sortOptions.createdAt = -1;
+    }
+
     let filter = {};
 
     if (req.query.projectName) {
-      // const projectId = await Project.findOne(
-      //   {
-      //     projectName: {
-      //       $regex: req.query.projectName,
-      //       $options: "i",
-      //     },
-      //   },
-      //   { _id: 1 }
-      // );
       const projectId = await Project.find(
         {
           projectName: {
@@ -149,16 +154,7 @@ export const getTasksByUserId = async (req, res) => {
       filter.project = projectId.map((project) => project._id);
     }
 
-    if (req.query.serviceName) {
-      // const serviceId = await Service.findOne(
-      //   {
-      //     serviceName: {
-      //       $regex: req.query.serviceName,
-      //       $options: "i",
-      //     },
-      //   },
-      //   { _id: 1 }
-      // );
+    if (req.query.serviceName || sortOptions.serviceName) {
       const serviceId = await Service.find(
         {
           serviceName: {
@@ -206,20 +202,6 @@ export const getTasksByUserId = async (req, res) => {
 
     filter.user = user._id;
 
-    const sortOptions = {};
-    if (req.query.sortBy) {
-      const sortFields = req.query.sortBy.split(",");
-      sortFields.forEach((field) => {
-        if (field.startsWith("-")) {
-          sortOptions[field.substring(1)] = -1;
-        } else {
-          sortOptions[field] = 1;
-        }
-      });
-    } else {
-      sortOptions.createdAt = -1;
-    }
-
     const totalTasks = await Task.find(filter)
       .populate("creator_id user project service")
       .sort(sortOptions);
@@ -238,7 +220,7 @@ export const getTasksByUserId = async (req, res) => {
     };
 
     tasks.forEach((task) => {
-      console.log(task.project.projectName);
+      console.log(task.status);
     });
 
     return ResponseHandler.success(
