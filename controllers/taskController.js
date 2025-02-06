@@ -65,15 +65,15 @@ export const createTask = async (req, res) => {
         "Start Date cannot be greater than Finish Date",
         400
       );
-    } else if (req.body.startTime > req.body.finishTime) {
+    } else if (req.body.startTime >= req.body.finishTime) {
       return ResponseHandler.error(
         res,
-        "Start Time cannot be greater than Finish Time",
+        "Start Time cannot be greater than equal to Finish Time",
         400
       );
     }
 
-    console.log("Req body", req.body);
+    // console.log("Req body", req.body);
 
     // Create the Task
     const task = await Task.create(req.body);
@@ -219,9 +219,9 @@ export const getTasksByUserId = async (req, res) => {
       totalTasks: totalTasks.length,
     };
 
-    tasks.forEach((task) => {
-      console.log(task.status);
-    });
+    // tasks.forEach((task) => {
+    //   console.log(task.status);
+    // });
 
     return ResponseHandler.success(
       res,
