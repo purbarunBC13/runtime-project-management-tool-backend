@@ -277,12 +277,14 @@ export const getProjectDateAnalytics = async (req, res) => {
     const startDate = moment(project.projectDate);
     const endDate = moment(startDate).add(project.projectPeriod, "days");
     const remainingDays = Math.max(endDate.diff(moment(), "days"), 0); // Avoid negative values
+    const exceededDays = Math.max(moment().diff(endDate, "days"), 0); // Avoid negative values
 
     const analyticsData = {
       projectName: project.projectName,
       startDate: startDate.format("YYYY-MM-DD"),
       endDate: endDate.format("YYYY-MM-DD"),
       remainingDays,
+      exceededDays,
     };
 
     return ResponseHandler.success(
