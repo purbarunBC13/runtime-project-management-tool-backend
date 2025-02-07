@@ -184,12 +184,26 @@ export const getTasksByUserId = async (req, res) => {
       );
       filter.service = serviceId.map((service) => service._id);
     }
-
     if (req.query.fromDate && req.query.toDate) {
-      filter.date = {
-        $gte: dateParser(req.query.fromDate),
-        $lte: dateParser(req.query.toDate),
-      };
+      const fromDate = new Date(req.query.fromDate);
+      const toDate = new Date(req.query.toDate);
+
+      // Remove time portion, keeping only the date (set time to 00:00:00)
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(23, 59, 59, 999); // Include the entire day
+
+      if (fromDate <= toDate) {
+        filter.date = {
+          $gte: fromDate,
+          $lte: toDate,
+        };
+      } else {
+        return ResponseHandler.error(
+          res,
+          "Invalid date range: fromDate must be before or equal to toDate",
+          400
+        );
+      }
     }
 
     if (req.query.status) {

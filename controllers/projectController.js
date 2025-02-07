@@ -64,7 +64,27 @@ export const getAllProjects = async (req, res) => {
     if (req.query.projectName) {
       filter.projectName = { $regex: req.query.projectName, $options: "i" };
     }
+    if (req.query.fromDate && req.query.toDate) {
+      const fromDate = new Date(req.query.fromDate);
+      const toDate = new Date(req.query.toDate);
 
+      // Remove time portion, keeping only the date (set time to 00:00:00)
+      fromDate.setUTCHours(0, 0, 0, 0);
+      toDate.setUTCHours(23, 59, 59, 999); // Include the entire day
+
+      if (fromDate <= toDate) {
+        filter.projectDate = {
+          $gte: fromDate,
+          $lte: toDate,
+        };
+      } else {
+        return ResponseHandler.error(
+          res,
+          "Invalid date range: fromDate must be before or equal to toDate",
+          400
+        );
+      }
+    }
     const sortOptions = {};
     if (req.query.sortBy) {
       const sortFields = req.query.sortBy.split(",");
