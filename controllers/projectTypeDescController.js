@@ -61,14 +61,12 @@ export const getAllProjectTypeDesc = async (req, res) => {
     }
 
     if (req.query.projectName) {
-      // filter.project = { $regex: req.query.projectName, $options: "i" };
-      const project = await Project.findOne({
-        projectName: req.query.projectName,
-      });
+      filter.project = { $regex: req.query.projectName, $options: "i" };
+      const project = await Project.find({ projectName: filter.project });
       if (!project) {
         return ResponseHandler.error(res, "Project not found", 404);
       }
-      filter.project = project._id;
+      filter.project = project.map((project) => project._id);
     }
 
     const response = await ProjectTypeDesc.find(filter)
