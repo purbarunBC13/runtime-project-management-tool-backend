@@ -50,14 +50,17 @@ export const getAllServices = async (req, res) => {
     }
 
     if (req.query.projectName) {
-      filter.project = { $regex: req.query.projectName, $options: "i" };
-      const project = await Project.findOne({
-        projectName: req.query.projectName,
+      // Fetch matching projects
+      const projects = await Project.find({
+        projectName: { $regex: req.query.projectName, $options: "i" },
       });
-      if (!project) {
+
+      if (projects.length === 0) {
         return ResponseHandler.error(res, "Project not found", 404);
       }
-      filter.project = project._id;
+
+      // Extract project IDs and apply them to the filter
+      filter.project = { $in: projects.map((project) => project._id) };
     }
 
     const services = await Service.aggregate([
@@ -70,9 +73,7 @@ export const getAllServices = async (req, res) => {
           as: "project",
         },
       },
-      {
-        $unwind: "$project",
-      },
+      { $unwind: "$project" },
       {
         $project: {
           "project.projectName": 1,
@@ -82,9 +83,7 @@ export const getAllServices = async (req, res) => {
           updatedAt: 1,
         },
       },
-      {
-        $sort: { createdAt: -1 },
-      },
+      { $sort: { createdAt: -1 } },
       {
         $addFields: {
           project: "$project.projectName",
@@ -101,17 +100,13 @@ export const getAllServices = async (req, res) => {
     const totalServices = await Service.countDocuments(filter);
     const totalPages = Math.ceil(totalServices / limit);
 
-    const paginationData = {
-      currentPage: page,
-      totalPages,
-      totalServices,
-      limit,
-    };
-
     return ResponseHandler.success(
       res,
       "All Services",
-      { services, paginationData },
+      {
+        services,
+        paginationData: { currentPage: page, totalPages, totalServices, limit },
+      },
       200
     );
   } catch (error) {

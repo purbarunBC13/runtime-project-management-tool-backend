@@ -102,9 +102,9 @@ export const getAllTasks = async (req, res) => {
       filter.project = project._id;
     }
 
-    const tasks = await Task.find(filter).populate(
-      "creator_id user project service"
-    );
+    const tasks = await Task.find(filter)
+      .populate("creator_id user project service")
+      .sort({ createdAt: -1 });
     // .skip(limit * (page - 1))
     // .limit(limit);
 
