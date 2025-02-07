@@ -1,6 +1,8 @@
 import Task from "../models/taskSchema.js";
 import User from "../models/userSchema.js";
+import moment from "moment";
 import ResponseHandler from "../utils/responseHandler.js";
+import Project from "../models/projectSchema.js";
 
 export const getTaskByStatus = async (req, res) => {
   try {
@@ -254,6 +256,41 @@ export const getNoOfUsersByProject = async (req, res) => {
     );
   } catch (error) {
     console.log(error);
+    return ResponseHandler.error(res, error.message);
+  }
+};
+
+export const getProjectDateAnalytics = async (req, res) => {
+  const { projectName } = req.query;
+
+  if (!projectName) {
+    return ResponseHandler.error(res, "Project name is required", 400);
+  }
+
+  try {
+    const project = await Project.findOne({ projectName });
+
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+
+    const startDate = moment(project.projectDate);
+    const endDate = moment(startDate).add(project.projectPeriod, "days");
+    const remainingDays = Math.max(endDate.diff(moment(), "days"), 0); // Avoid negative values
+
+    const analyticsData = {
+      projectName: project.projectName,
+      startDate: startDate.format("YYYY-MM-DD"),
+      endDate: endDate.format("YYYY-MM-DD"),
+      remainingDays,
+    };
+
+    return ResponseHandler.success(
+      res,
+      "Project analytics data fetched successfully",
+      { project: analyticsData }
+    );
+  } catch (error) {
     return ResponseHandler.error(res, error.message);
   }
 };

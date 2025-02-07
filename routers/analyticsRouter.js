@@ -3,6 +3,7 @@ import { verifyToken } from "../middlewares/authMidlleware.js";
 import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 import {
   getNoOfUsersByProject,
+  getProjectDateAnalytics,
   getTaskByStatus,
   getTaskPerProject,
   getWorkDurationByProject,
@@ -38,4 +39,10 @@ analyticsRouter.get(
   getNoOfUsersByProject
 );
 
+analyticsRouter.get(
+  "/project-duration",
+  verifyToken,
+  checkPermission("read_analytics"),
+  getProjectDateAnalytics
+);
 export default analyticsRouter;
