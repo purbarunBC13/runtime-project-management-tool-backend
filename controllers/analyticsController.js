@@ -205,3 +205,55 @@ export const getWorkDurationByProject = async (req, res) => {
     return ResponseHandler.error(res, error.message);
   }
 };
+
+export const getNoOfUsersByProject = async (req, res) => {
+  const projectName = req.query.projectName;
+  if (!projectName) {
+    return ResponseHandler.error(res, "Project name is required", 400);
+  }
+
+  try {
+    const noOfUsers = await Task.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+      {
+        $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "project",
+        },
+      },
+      { $unwind: "$project" },
+      {
+        $match: { "project.projectName": projectName },
+      },
+      {
+        $group: {
+          _id: "$user._id", // Grouping by unique user ID
+        },
+      },
+      {
+        $count: "totalUsers", // Count total unique users
+      },
+    ]);
+
+    const totalUsers = noOfUsers.length ? noOfUsers[0].totalUsers : 0;
+
+    return ResponseHandler.success(
+      res,
+      "Number of users assigned to project fetched successfully",
+      { totalUsers }
+    );
+  } catch (error) {
+    console.log(error);
+    return ResponseHandler.error(res, error.message);
+  }
+};
