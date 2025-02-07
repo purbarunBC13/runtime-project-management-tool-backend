@@ -281,8 +281,8 @@ export const getProjectDateAnalytics = async (req, res) => {
 
     const analyticsData = {
       projectName: project.projectName,
-      startDate: startDate.format("YYYY-MM-DD"),
-      endDate: endDate.format("YYYY-MM-DD"),
+      startDate: startDate.format("DD-MM-YYYY"),
+      endDate: endDate.format("DD-MM-YYYY"),
       remainingDays,
       exceededDays,
     };
