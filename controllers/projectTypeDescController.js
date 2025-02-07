@@ -49,8 +49,6 @@ export const getAllProjectTypeDesc = async (req, res) => {
 
     const filter = {};
 
-    filter.createdAt = { createdAt: -1 };
-
     if (req.query.projectTypeDescription) {
       filter.projectTypeDescription = {
         $regex: req.query.projectTypeDescription,
@@ -74,7 +72,8 @@ export const getAllProjectTypeDesc = async (req, res) => {
     const response = await ProjectTypeDesc.find(filter)
       .populate("project")
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     const totalTypeDesc = await ProjectTypeDesc.countDocuments(filter);
     if (response.length === 0) {
