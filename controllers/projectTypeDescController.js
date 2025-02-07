@@ -49,6 +49,8 @@ export const getAllProjectTypeDesc = async (req, res) => {
 
     const filter = {};
 
+    filter.createdAt = { createdAt: -1 };
+
     if (req.query.projectTypeDescription) {
       filter.projectTypeDescription = {
         $regex: req.query.projectTypeDescription,
