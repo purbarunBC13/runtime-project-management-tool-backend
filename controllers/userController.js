@@ -33,12 +33,14 @@ export const getAllUsers = async (req, res) => {
     const response = await getAllUsersService();
     const totalUsers = response.data.length;
     if (response.status === 200) {
-      const users = response.data.slice(skip, skip + limit).filter((user) => {
-        if (userName) {
-          return user.name.toLowerCase().includes(userName.toLowerCase());
-        }
-        return true;
-      });
+      const users = response.data
+        .filter((user) => {
+          if (userName) {
+            return user.name.toLowerCase().includes(userName.toLowerCase());
+          }
+          return true;
+        })
+        .slice(skip, skip + limit);
       response.data = users;
       const paginationData = {
         currentPage: page,
