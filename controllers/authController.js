@@ -23,34 +23,34 @@ export const loginUser = async (req, res) => {
         externalId: userPayload.externalId,
       });
 
+      console.log("Existing user:", response.data);
       if (!existingUser) {
         const newUserPayload = {
           externalId: response.data.id,
           roleId: response.data.role_id,
           roleName: response.data.role_id === 1 ? "Admin" : "User",
           officeId: response.data.office_id,
-          officeName: response.data.office_name,
-          departmentId: response.data.department_id,
-          departmentName: response.data.department_name,
-          designation: response.data.designation,
-          email: response.data.email,
-          name: response.data.name,
-          dob: response.data.dob,
+          officeName: response.data.office_name || null,
+          departmentId: response.data.department_id || null,
+          departmentName: response.data.department_name || null,
+          designation: response.data.designation || null,
+          email: response.data.email || null,
+          name: response.data.name || null,
+          dob: response.data.dob || null,
           gender: response.data.gender,
-          mobile: response.data.mobile,
-          profilePic: response.data.profilepic,
+          mobile: response.data.mobile || 123,
+          profilePic: response.data.profilepic || null,
         };
-
+        console.log("New user payload:", newUserPayload);
         try {
           await User.create(newUserPayload);
           logger.info("New user created in the database");
         } catch (createError) {
-          logger.error("Error creating user:", createError);
+          console.log("Error creating user:", createError);
           return ResponseHandler.error(
             res,
             "Failed to save user in the database",
-            500,
-            createError
+            500
           );
         }
       } else {

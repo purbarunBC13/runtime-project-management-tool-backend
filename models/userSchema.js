@@ -9,59 +9,48 @@ const userSchema = new mongoose.Schema(
     },
     roleId: {
       type: Number,
-      required: true,
+      default: 0,
     },
     roleName: {
       type: String,
       enum: ["Admin", "User"],
-      required: true,
     },
     officeId: {
       type: Number,
-      required: true,
+      default: 0,
     },
     officeName: {
       type: String,
-      // required: true,
     },
     departmentId: {
       type: Number,
-      // required: true,
     },
     departmentName: {
       type: String,
-      // required: true,
     },
     designation: {
       type: String,
-      // required: true,
     },
     email: {
       type: String,
-      // required: true,
-      unique: true,
     },
     name: {
       type: String,
-      required: true,
     },
     dob: {
       type: Date,
-      // required: true,
     },
     gender: {
       type: Number,
-      // required: true,
       enum: [1, 2],
+      default: 1,
     },
     mobile: {
       type: Number,
-      // required: true,
-      unique: true,
+      default: 0,
     },
     profilePic: {
       type: String,
-      // required: true,
     },
   },
   {
