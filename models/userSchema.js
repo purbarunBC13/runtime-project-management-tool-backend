@@ -22,23 +22,23 @@ const userSchema = new mongoose.Schema(
     },
     officeName: {
       type: String,
-      required: true,
+      // required: true,
     },
     departmentId: {
       type: Number,
-      required: true,
+      // required: true,
     },
     departmentName: {
       type: String,
-      required: true,
+      // required: true,
     },
     designation: {
       type: String,
-      required: true,
+      // required: true,
     },
     email: {
       type: String,
-      required: true,
+      // required: true,
       unique: true,
     },
     name: {
@@ -51,17 +51,17 @@ const userSchema = new mongoose.Schema(
     },
     gender: {
       type: Number,
-      required: true,
+      // required: true,
       enum: [1, 2],
     },
     mobile: {
       type: Number,
-      required: true,
+      // required: true,
       unique: true,
     },
     profilePic: {
       type: String,
-      required: true,
+      // required: true,
     },
   },
   {
