@@ -49,7 +49,7 @@ export const getAllUsers = async (req, res) => {
       };
       // console.log("paginationData", users.length);
       return ResponseHandler.success(res, "Users fetched successfully", {
-        requiredUsers,
+        users: requiredUsers,
         paginationData,
       });
     } else {
