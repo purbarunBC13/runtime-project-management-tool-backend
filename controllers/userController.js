@@ -31,25 +31,25 @@ export const getAllUsers = async (req, res) => {
 
   try {
     const response = await getAllUsersService();
-    const totalUsers = response.data.length;
     if (response.status === 200) {
-      const users = response.data
-        .filter((user) => {
-          if (userName) {
-            return user.name.toLowerCase().includes(userName.toLowerCase());
-          }
-          return true;
-        })
-        .slice(skip, skip + limit);
-      response.data = users;
+      const users = response.data.filter((user) => {
+        if (userName) {
+          return user.name.toLowerCase().includes(userName.toLowerCase());
+        }
+        return true;
+      });
+
+      const requiredUsers = users.slice(skip, skip + limit);
+
       const paginationData = {
         currentPage: page,
         totalPages: Math.ceil(users.length / limit),
         limit,
-        totalUsers: totalUsers,
+        totalUsers: users.length,
       };
+      // console.log("paginationData", users.length);
       return ResponseHandler.success(res, "Users fetched successfully", {
-        users,
+        requiredUsers,
         paginationData,
       });
     } else {
