@@ -21,11 +21,14 @@
     "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
     "helmet": "^8.0.0",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
+    "moment-timezone": "^0.5.47",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "nodemon": "^3.1.9",
+    "pdfkit": "^0.16.0",
     "winston": "^3.17.0",
     "zod": "^3.24.1"
   }

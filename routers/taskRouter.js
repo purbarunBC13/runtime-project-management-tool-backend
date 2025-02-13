@@ -6,6 +6,8 @@ import {
   createTask,
   getAllTasks,
   getTasksByUserId,
+  sendTaskForExcel,
+  sendTaskForPDF,
 } from "../controllers/taskController.js";
 
 const taskRouter = express.Router();
@@ -27,6 +29,19 @@ taskRouter.get(
   getTasksByUserId
 );
 
+taskRouter.get(
+  "/export-csv",
+  verifyToken,
+  checkPermission("read_task"),
+  sendTaskForExcel
+);
+
+taskRouter.get(
+  "/export-pdf",
+  verifyToken,
+  checkPermission("read_task"),
+  sendTaskForPDF
+);
 // TODO: Get Tasks by User for Admin
 
 export default taskRouter;

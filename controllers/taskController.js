@@ -4,6 +4,9 @@ import Task from "../models/taskSchema.js";
 import User from "../models/userSchema.js";
 import { logger } from "../utils/logger.js";
 import ResponseHandler from "../utils/responseHandler.js";
+import { Parser } from "json2csv";
+import PDFDocument from "pdfkit";
+import moment from "moment-timezone";
 
 const dateParser = (date) => {
   if (new Date(date).toString() === "Invalid Date") {
@@ -304,5 +307,196 @@ export const getTasksByCreatorId = async (req, res) => {
     );
   } catch (error) {
     return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const sendTaskForExcel = async (req, res) => {
+  try {
+    const { userName } = req.query;
+
+    if (!userName) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "UserName is required in the query",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Find the user by userName
+    const user = await User.findOne({ name: userName });
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "User not found",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Fetch only tasks assigned to the user
+    const tasks = await Task.find({ user: user._id }).populate(
+      "creator_id user project service"
+    ); // Populate references
+
+    if (!tasks.length) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "No tasks found for this user",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Convert timestamps to IST and format data
+    const tasksWithIST = tasks.map((task) => ({
+      "Task ID": task._id.toString(),
+      "Creator Role": task.creator_role,
+      "Creator Name": task.creator_id.name,
+      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
+      "Assigned User": user.name, // Directly from user object
+      Project: task.project?.projectName || "N/A",
+      Service: task.service?.serviceName || "N/A",
+      Purpose: task.purpose,
+      "Start Date": moment(task.startDate)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD"),
+      "Start Time": moment(task.startTime)
+        .tz("Asia/Kolkata")
+        .format("HH:mm:ss"),
+      "Finish Date": moment(task.finishDate)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD"),
+      "Finish Time": moment(task.finishTime)
+        .tz("Asia/Kolkata")
+        .format("HH:mm:ss"),
+      Status: task.status,
+    }));
+
+    // Define CSV fields
+    const fields = [
+      "Task ID",
+      "Creator Role",
+      "Creator Name",
+      "Date",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+
+    // Convert to CSV
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(tasksWithIST);
+
+    // Send file as response
+    res.attachment(`tasks_${userName}.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Failed to export tasks",
+      exception: error,
+      data: null,
+    });
+  }
+};
+
+export const sendTaskForPDF = async (req, res) => {
+  try {
+    const { userName } = req.query;
+
+    if (!userName) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "UserName is required in the query",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Find user by name
+    const user = await User.findOne({ name: userName });
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "User not found",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Fetch tasks assigned to the user
+    const tasks = await Task.find({ user: user._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "No tasks found for this user",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Create PDF document
+    const doc = new PDFDocument();
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tasks_${userName}.pdf`
+    );
+    res.setHeader("Content-Type", "application/pdf");
+
+    doc.pipe(res); // Send PDF as response
+
+    // Title
+    doc
+      .fontSize(18)
+      .text(`Task Report for ${userName}`, { align: "center" })
+      .moveDown();
+
+    tasks.forEach((task, index) => {
+      doc
+        .fontSize(12)
+        .text(`Task ${index + 1}`, { underline: true })
+        .text(`Task ID: ${task._id}`)
+        .text(`Creator Role: ${task.creator_role}`)
+        .text(`Creator Name: ${task.creator_id.name}`)
+        .text(`Assigned User: ${user.name}`)
+        .text(`Project: ${task.project?.projectName || "N/A"}`)
+        .text(`Service: ${task.service?.serviceName || "N/A"}`)
+        .text(`Purpose: ${task.purpose}`)
+        .text(
+          `Start Date: ${moment(task.startDate)
+            .tz("Asia/Kolkata")
+            .format("YYYY-MM-DD HH:mm:ss")}`
+        )
+        .text(
+          `Finish Date: ${moment(task.finishDate)
+            .tz("Asia/Kolkata")
+            .format("YYYY-MM-DD HH:mm:ss")}`
+        )
+        .text(`Status: ${task.status}`)
+        .moveDown();
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Failed to export tasks to PDF",
+      exception: error,
+      data: null,
+    });
   }
 };
