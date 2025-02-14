@@ -668,39 +668,51 @@ export const continueTaskTomorrow = async (req, res) => {
       );
     }
 
-    // Get the current date & time (store in UTC but convert to IST for calculations)
+    // Get the current date & time in IST
     const currentDateTime = moment().tz("Asia/Kolkata");
 
-    // **Manually rollback if new task creation fails**
+    // **Determine the next working day**
+    let nextDay = moment().tz("Asia/Kolkata").add(1, "day");
+
+    // If next day is Sunday → Move to Monday
+    if (nextDay.day() === 0) {
+      nextDay.add(1, "day");
+    }
+
+    // If next day is 1st or 3rd Saturday → Move to Monday
+    if (nextDay.day() === 6) {
+      const firstDayOfMonth = nextDay.clone().startOf("month");
+      const firstSaturday = firstDayOfMonth.clone().day(6);
+      if (firstSaturday.date() > 7) firstSaturday.add(7, "days"); // Ensure it's in the 1st week
+      const thirdSaturday = firstSaturday.clone().add(14, "days"); // 3rd Saturday
+
+      if (
+        nextDay.date() === firstSaturday.date() ||
+        nextDay.date() === thirdSaturday.date()
+      ) {
+        console.log("🚫 Next day is 1st or 3rd Saturday, skipping to Monday.");
+        nextDay.add(2, "days");
+      }
+    }
+
+    // Set start time for the next working day (9 AM IST)
+    const nextDayStartTime = nextDay
+      .clone()
+      .set({ hour: 10, minute: 30, second: 0 });
+
     try {
       // Update the existing task with finishDate & finishTime (Stored in UTC)
       existingTask.finishDate = currentDateTime.utc().toISOString();
       existingTask.finishTime = currentDateTime.utc().toISOString();
       await existingTask.save(); // Save update
 
-      // **Fix: Get the correct next day's start date (next day of existing startDate)**
-      const nextDayStartDate = moment(existingTask.startDate)
-        .tz("Asia/Kolkata")
-        .add(1, "day")
-        .startOf("day");
-
-      console.log("Next Day Start Date:", nextDayStartDate.format());
-      console.log("Current DateTime:", currentDateTime.format());
-
-      // Set start time for the next day (9 AM IST)
-      const nextDayStartTime = moment(nextDayStartDate)
-        .tz("Asia/Kolkata")
-        .set({ hour: 10, minute: 30, second: 0 });
-
-      // Convert to UTC before storing
-      // const nextDayStartDateUTC = nextDayStartDate.utc().toISOString();
-
+      // Convert start time to UTC before storing
       const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
 
       const newTask = new Task({
         creator_role: existingTask.creator_role,
         creator_id: existingTask.creator_id,
-        date: nextDayStartTimeUTC, // Set the correct start date for the next day
+        date: nextDayStartTimeUTC, // Set the correct start date
         user: existingTask.user,
         project: existingTask.project,
         service: existingTask.service,
@@ -717,7 +729,7 @@ export const continueTaskTomorrow = async (req, res) => {
 
       return ResponseHandler.success(
         res,
-        "Task successfully continued for tomorrow",
+        `Task successfully continued for ${nextDay.format("dddd")}`,
         newTask,
         200
       );
@@ -731,12 +743,12 @@ export const continueTaskTomorrow = async (req, res) => {
 
       return ResponseHandler.error(
         res,
-        "Failed to continue task for tomorrow. Changes were rolled back.",
+        "Failed to continue task for the next working day. Changes were rolled back.",
         400
       );
     }
   } catch (error) {
-    console.error("Error in continuing task for tomorrow:", error);
+    console.error("Error in continuing task for the next working day:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };
