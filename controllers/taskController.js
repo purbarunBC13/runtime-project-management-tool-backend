@@ -449,7 +449,12 @@ export const sendTaskForPDF = async (req, res) => {
     }
 
     // Create PDF document
-    const doc = new PDFDocument();
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+      layout: "landscape",
+    });
+
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=tasks_${userName}.pdf`
@@ -461,32 +466,116 @@ export const sendTaskForPDF = async (req, res) => {
     // Title
     doc
       .fontSize(18)
+      .fillColor("#333333")
       .text(`Task Report for ${userName}`, { align: "center" })
-      .moveDown();
+      .moveDown(1);
 
+    // Define Table Headers and Column Widths
+    const headers = [
+      "Creator",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Finish Date",
+      "Status",
+    ];
+    const columnWidths = [80, 80, 120, 100, 120, 90, 90, 70];
+
+    let y = doc.y + 10; // Initial Y position for table
+
+    // Draw Table Headers with Background Color
+    doc
+      .rect(30, y, doc.page.width - 60, 25)
+      .fill("#007ACC")
+      .stroke();
+    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+    let x = 30;
+    headers.forEach((header, i) => {
+      doc.text(header, x + 5, y + 7, {
+        width: columnWidths[i],
+        align: "center",
+      });
+      x += columnWidths[i];
+    });
+
+    doc.fillColor("black").font("Helvetica").fontSize(9);
+    y += 25; // Move down for data rows
+
+    // Draw Table Rows with Dynamic Heights
     tasks.forEach((task, index) => {
-      doc
-        .fontSize(12)
-        .text(`Task ${index + 1}`, { underline: true })
-        .text(`Task ID: ${task._id}`)
-        .text(`Creator Role: ${task.creator_role}`)
-        .text(`Creator Name: ${task.creator_id.name}`)
-        .text(`Assigned User: ${user.name}`)
-        .text(`Project: ${task.project?.projectName || "N/A"}`)
-        .text(`Service: ${task.service?.serviceName || "N/A"}`)
-        .text(`Purpose: ${task.purpose}`)
-        .text(
-          `Start Date: ${moment(task.startDate)
-            .tz("Asia/Kolkata")
-            .format("YYYY-MM-DD HH:mm:ss")}`
-        )
-        .text(
-          `Finish Date: ${moment(task.finishDate)
-            .tz("Asia/Kolkata")
-            .format("YYYY-MM-DD HH:mm:ss")}`
-        )
-        .text(`Status: ${task.status}`)
-        .moveDown();
+      let x = 30;
+
+      const rowData = [
+        task.creator_id?.name || "N/A",
+        user.name,
+        task.project?.projectName || "N/A",
+        task.service?.serviceName || "N/A",
+        task.purpose,
+        moment(task.startDate).tz("Asia/Kolkata").format("MMMM Do YYYY"),
+        moment(task.finishDate).tz("Asia/Kolkata").format("MMMM Do YYYY"),
+        task.status,
+      ];
+
+      // Determine the maximum row height based on text wrapping
+      let maxRowHeight = 0;
+      rowData.forEach((text, i) => {
+        let textHeight = doc.heightOfString(text, {
+          width: columnWidths[i] - 10,
+        });
+        maxRowHeight = Math.max(maxRowHeight, textHeight);
+      });
+
+      maxRowHeight += 10; // Add padding for readability
+
+      // Check for page overflow and add new page if needed
+      if (y + maxRowHeight > doc.page.height - 50) {
+        doc.addPage();
+        y = 50; // Reset Y position on new page
+
+        // Redraw the table headers on the new page
+        doc
+          .rect(30, y, doc.page.width - 60, 20)
+          .fill("#007ACC")
+          .stroke();
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+        let x = 30;
+        headers.forEach((header, i) => {
+          doc.text(header, x + 5, y + 7, {
+            width: columnWidths[i],
+            align: "center",
+          });
+          x += columnWidths[i];
+        });
+
+        doc.fillColor("black").font("Helvetica").fontSize(9);
+        y += 25; // Move down for data rows
+      }
+
+      // Alternate row colors for better readability
+      if (index % 2 === 0) {
+        doc
+          .rect(30, y, doc.page.width - 60, maxRowHeight)
+          .fill("#F3F3F3")
+          .stroke();
+      }
+
+      doc.fillColor("black");
+
+      // Draw Text in each column with adjusted row height
+      x = 30;
+      rowData.forEach((text, i) => {
+        doc.text(text, x + 5, y + 5, {
+          width: columnWidths[i] - 10,
+          align: "center",
+        });
+        x += columnWidths[i];
+      });
+
+      y += maxRowHeight; // Move down for the next row
     });
 
     doc.end();
