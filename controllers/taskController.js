@@ -314,17 +314,17 @@ export const sendTaskForExcel = async (req, res) => {
   try {
     const { userName } = req.query;
 
-    if (!userName) {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "UserName is required in the query",
-        exception: null,
-        data: null,
-      });
-    }
+    // if (!userName) {
+    //   return res.status(400).json({
+    //     statusCode: 400,
+    //     message: "UserName is required in the query",
+    //     exception: null,
+    //     data: null,
+    //   });
+    // }
 
     // Find the user by userName
-    const user = await User.findOne({ name: userName });
+    const user = await User.findOne({ externalId: req.externalId });
 
     if (!user) {
       return res.status(404).json({
@@ -413,17 +413,17 @@ export const sendTaskForPDF = async (req, res) => {
   try {
     const { userName } = req.query;
 
-    if (!userName) {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "UserName is required in the query",
-        exception: null,
-        data: null,
-      });
-    }
+    // if (!userName) {
+    //   return res.status(400).json({
+    //     statusCode: 400,
+    //     message: "UserName is required in the query",
+    //     exception: null,
+    //     data: null,
+    //   });
+    // }
 
     // Find user by name
-    const user = await User.findOne({ name: userName });
+    const user = await User.findOne({ externalId: req.externalId });
 
     if (!user) {
       return res.status(404).json({
@@ -457,7 +457,7 @@ export const sendTaskForPDF = async (req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=tasks_${userName}.pdf`
+      `attachment; filename=tasks_${user.name}.pdf`
     );
     res.setHeader("Content-Type", "application/pdf");
 
@@ -467,7 +467,7 @@ export const sendTaskForPDF = async (req, res) => {
     doc
       .fontSize(18)
       .fillColor("#333333")
-      .text(`Task Report for ${userName}`, { align: "center" })
+      .text(`Task Report for ${user.name}`, { align: "center" })
       .moveDown(1);
 
     // Define Table Headers and Column Widths
