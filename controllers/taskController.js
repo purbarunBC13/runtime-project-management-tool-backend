@@ -629,15 +629,22 @@ export const continueTaskTomorrow = async (req, res) => {
       return ResponseHandler.error(res, "Task not found", 404);
     }
 
-    // Check if the task has Finish Date & Finish Time
-    if (existingTask.finishDate && existingTask.finishTime) {
+    // Check if the startDate of the task is today's date
+    const taskStartDate = moment(existingTask.startDate).format("YYYY-MM-DD");
+    const todayDate = moment().format("YYYY-MM-DD");
+
+    if (taskStartDate !== todayDate) {
       return ResponseHandler.error(
         res,
-        "This task is already forwarded. It cannot be continued.",
+        "This task is not for today. It cannot be continued.",
         400
       );
     }
 
+    // console.log("Existing Task Start Date:", taskStartDate);
+    // console.log("Today's Date:", todayDate);
+
+    // Check if the task has Finish Date & Finish Time
     // **Use the slug from the existing task**
     const { slug } = existingTask;
 
@@ -658,52 +665,68 @@ export const continueTaskTomorrow = async (req, res) => {
     // Get the current date & time (store in UTC but convert to IST for calculations)
     const currentDateTime = moment().tz("Asia/Kolkata");
 
-    // Update the existing task with finishDate & finishTime (Stored in UTC)
-    existingTask.finishDate = currentDateTime.utc().toISOString(); // Save as UTC ISO string
-    existingTask.finishTime = currentDateTime.utc().toISOString();
-    await existingTask.save();
+    // **Manually rollback if new task creation fails**
+    try {
+      // Update the existing task with finishDate & finishTime (Stored in UTC)
+      existingTask.finishDate = currentDateTime.utc().toISOString();
+      existingTask.finishTime = currentDateTime.utc().toISOString();
+      await existingTask.save(); // Save update
 
-    // **Fix: Get the correct next day's start date**
-    const nextDayStartDate = moment()
-      .tz("Asia/Kolkata")
-      .add(1, "day")
-      .startOf("day");
+      // **Fix: Get the correct next day's start date**
+      const nextDayStartDate = moment()
+        .tz("Asia/Kolkata")
+        .add(1, "day")
+        .startOf("day");
 
-    console.log("Next Day Start Date:", nextDayStartDate.format()); // Debugging log
-    console.log("Current DateTime:", currentDateTime.format());
+      console.log("Next Day Start Date:", nextDayStartDate.format());
+      console.log("Current DateTime:", currentDateTime.format());
 
-    // Set start time for the next day (9 AM IST)
-    const nextDayStartTime = moment
-      .tz(nextDayStartDate, "Asia/Kolkata")
-      .set({ hour: 9, minute: 0, second: 0 });
+      // Set start time for the next day (9 AM IST)
+      const nextDayStartTime = moment
+        .tz(nextDayStartDate, "Asia/Kolkata")
+        .set({ hour: 9, minute: 0, second: 0 });
 
-    // Convert to UTC before storing
-    const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
+      // Convert to UTC before storing
+      const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
 
-    const newTask = new Task({
-      creator_role: existingTask.creator_role,
-      creator_id: existingTask.creator_id,
-      date: currentDateTime.utc().toISOString(), // Ensure to store date in UTC format
-      user: existingTask.user,
-      project: existingTask.project,
-      service: existingTask.service,
-      purpose: existingTask.purpose,
-      slug: slug, // Use existing slug
-      startDate: nextDayStartTimeUTC,
-      startTime: nextDayStartTimeUTC,
-      finishDate: null,
-      finishTime: null,
-      status: "Ongoing",
-    });
+      const newTask = new Task({
+        creator_role: existingTask.creator_role,
+        creator_id: existingTask.creator_id,
+        date: currentDateTime.utc().toISOString(),
+        user: existingTask.user,
+        project: existingTask.project,
+        service: existingTask.service,
+        purpose: existingTask.purpose,
+        slug: slug,
+        startDate: nextDayStartTimeUTC,
+        startTime: nextDayStartTimeUTC,
+        finishDate: null,
+        finishTime: null,
+        status: "Ongoing",
+      });
 
-    await newTask.save();
+      await newTask.save(); // Create new task
 
-    return ResponseHandler.success(
-      res,
-      "Task successfully continued for tomorrow",
-      newTask,
-      200
-    );
+      return ResponseHandler.success(
+        res,
+        "Task successfully continued for tomorrow",
+        newTask,
+        200
+      );
+    } catch (error) {
+      console.error("Error while inserting new task, rolling back:", error);
+
+      // **Manual rollback: Undo finishDate & finishTime if new task creation fails**
+      existingTask.finishDate = null;
+      existingTask.finishTime = null;
+      await existingTask.save(); // Revert the update
+
+      return ResponseHandler.error(
+        res,
+        "Failed to continue task for tomorrow. Changes were rolled back.",
+        400
+      );
+    }
   } catch (error) {
     console.error("Error in continuing task for tomorrow:", error);
     return ResponseHandler.error(res, error.message, 400);
