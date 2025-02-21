@@ -27,6 +27,7 @@
     "moment-timezone": "^0.5.47",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
+    "node-cron": "^3.0.3",
     "nodemon": "^3.1.9",
     "pdfkit": "^0.16.0",
     "pdfkit-table": "^0.1.99",
