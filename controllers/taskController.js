@@ -78,6 +78,12 @@ export const createTask = async (req, res) => {
     // Assign slug to request body
     req.body.slug = slug;
 
+    // Convert the startDate and startTime to IST format
+    const startDate = moment(req.body.startDate).tz("Asia/Kolkata").toDate();
+    // req.body.startTime = moment(req.body.startTime).tz("Asia/Kolkata").toDate();
+
+    console.log(startDate);
+
     // Create the Task
     const task = await Task.create(req.body);
 
@@ -629,11 +635,13 @@ export const continueTaskTomorrow = async (req, res) => {
       return ResponseHandler.error(res, "Task not found", 404);
     }
 
-    // Check if the startDate of the task is today's date
-    const taskStartDate = moment(existingTask.startDate).format("YYYY-MM-DD");
-    const todayDate = moment().format("YYYY-MM-DD");
+    // Check if the startDate of the task is today or earlier
+    const taskStartDate = moment(existingTask.startDate)
+      .tz("Asia/Kolkata")
+      .format("YYYY-MM-DD");
+    const todayDate = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
 
-    if (taskStartDate !== todayDate) {
+    if (taskStartDate > todayDate) {
       return ResponseHandler.error(
         res,
         "This task is not for today. It cannot be continued.",
@@ -641,10 +649,6 @@ export const continueTaskTomorrow = async (req, res) => {
       );
     }
 
-    // console.log("Existing Task Start Date:", taskStartDate);
-    // console.log("Today's Date:", todayDate);
-
-    // Check if the task has Finish Date & Finish Time
     // **Use the slug from the existing task**
     const { slug } = existingTask;
 
@@ -672,8 +676,8 @@ export const continueTaskTomorrow = async (req, res) => {
       existingTask.finishTime = currentDateTime.utc().toISOString();
       await existingTask.save(); // Save update
 
-      // **Fix: Get the correct next day's start date**
-      const nextDayStartDate = moment()
+      // **Fix: Get the correct next day's start date (next day of existing startDate)**
+      const nextDayStartDate = moment(existingTask.startDate)
         .tz("Asia/Kolkata")
         .add(1, "day")
         .startOf("day");
@@ -682,17 +686,18 @@ export const continueTaskTomorrow = async (req, res) => {
       console.log("Current DateTime:", currentDateTime.format());
 
       // Set start time for the next day (9 AM IST)
-      const nextDayStartTime = moment
-        .tz(nextDayStartDate, "Asia/Kolkata")
+      const nextDayStartTime = moment(nextDayStartDate)
+        .tz("Asia/Kolkata")
         .set({ hour: 9, minute: 0, second: 0 });
 
       // Convert to UTC before storing
+      const nextDayStartDateUTC = nextDayStartDate.utc().toISOString();
       const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
 
       const newTask = new Task({
         creator_role: existingTask.creator_role,
         creator_id: existingTask.creator_id,
-        date: currentDateTime.utc().toISOString(),
+        date: nextDayStartDateUTC, // Set the correct start date for the next day
         user: existingTask.user,
         project: existingTask.project,
         service: existingTask.service,
@@ -738,24 +743,14 @@ export const markTaskAsComplete = async (req, res) => {
     const { taskId } = req.body;
 
     if (!taskId) {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "Task ID is required",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(res, "Task ID is required.", 400);
     }
 
     // Find the task by ID
     const existingTask = await Task.findById(taskId);
 
     if (!existingTask) {
-      return res.status(404).json({
-        statusCode: 404,
-        message: "Task not found",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(res, "Task not found", 404);
     }
 
     // **Use the slug from the existing task**
@@ -768,27 +763,39 @@ export const markTaskAsComplete = async (req, res) => {
     });
 
     if (isModuleCompleted) {
-      return res.status(400).json({
-        statusCode: 400,
-        message:
-          "Another task in this module is already completed. This task cannot be marked as completed.",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(
+        res,
+        "Another task under this module is already completed. You cannot complete this task.",
+        400
+      );
     }
 
     // Ensure the task is still "Ongoing"
     if (existingTask.status === "Completed") {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "This task is already completed.",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(
+        res,
+        "This task is already marked as completed.",
+        400
+      );
     }
+
+    // check if
 
     // Get the current date & time in IST
     const currentDateTime = moment().tz("Asia/Kolkata");
+
+    const taskStartDate = moment(existingTask.startDate)
+      .tz("Asia/Kolkata")
+      .format("YYYY-MM-DD");
+    const todayDate = currentDateTime.format("YYYY-MM-DD");
+
+    if (taskStartDate > todayDate) {
+      return ResponseHandler.error(
+        res,
+        "This task is not for today. It cannot be completed.",
+        400
+      );
+    }
 
     // Mark only this task as "Completed"
     existingTask.status = "Completed";
@@ -796,18 +803,14 @@ export const markTaskAsComplete = async (req, res) => {
     existingTask.finishTime = currentDateTime.toDate();
     await existingTask.save();
 
-    return res.status(200).json({
-      statusCode: 200,
-      message: "Task successfully marked as Completed.",
-      data: existingTask,
-    });
+    return ResponseHandler.success(
+      res,
+      "Task marked as completed successfully",
+      existingTask,
+      200
+    );
   } catch (error) {
     console.error("Error marking task as complete:", error);
-    return res.status(500).json({
-      statusCode: 500,
-      message: "Failed to mark task as complete",
-      exception: error,
-      data: null,
-    });
+    return ResponseHandler.error(res, error.message, 400);
   }
 };

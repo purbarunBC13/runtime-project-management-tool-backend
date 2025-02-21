@@ -8,6 +8,7 @@ import {
   getAllTasks,
   getTaskByTaskId,
   getTasksByUserId,
+  markTaskAsComplete,
   sendTaskForExcel,
   sendTaskForPDF,
 } from "../controllers/taskController.js";
@@ -30,10 +31,10 @@ taskRouter.patch(
 );
 
 taskRouter.patch(
-  "mark-completed",
+  "/mark-completed",
   verifyToken,
   checkPermission("update_task"),
-  continueTaskTomorrow
+  markTaskAsComplete
 );
 
 taskRouter.get("/all", verifyToken, checkPermission("read_tasks"), getAllTasks);
