@@ -15,6 +15,9 @@ const taskSchema = new mongoose.Schema(
     date: {
       type: Date,
       required: true,
+      default: function () {
+        return this.startDate;
+      },
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,13 +28,20 @@ const taskSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Project",
       required: true,
+      index: true,
     },
     service: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Service",
       required: true,
+      index: true,
     },
     purpose: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    slug: {
       type: String,
       required: true,
     },
@@ -45,11 +55,17 @@ const taskSchema = new mongoose.Schema(
     },
     finishDate: {
       type: Date,
-      required: true,
+      required: function () {
+        return this.status === "Completed";
+      },
+      default: null,
     },
     finishTime: {
       type: Date,
-      required: true,
+      required: function () {
+        return this.status === "Completed";
+      },
+      default: null,
     },
     status: {
       type: String,
@@ -61,5 +77,4 @@ const taskSchema = new mongoose.Schema(
 );
 
 const Task = mongoose.model("Task", taskSchema);
-
 export default Task;

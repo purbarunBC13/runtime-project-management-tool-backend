@@ -8,13 +8,13 @@ import { Parser } from "json2csv";
 import PDFDocument from "pdfkit";
 import moment from "moment-timezone";
 
-const dateParser = (date) => {
-  if (new Date(date).toString() === "Invalid Date") {
-    throw new Error(`${date} is Invalid Date`);
-  } else {
-    return new Date(date);
-  }
-};
+// const dateParser = (date) => {
+//   if (new Date(date).toString() === "Invalid Date") {
+//     throw new Error(`${date} is Invalid Date`);
+//   } else {
+//     return new Date(date);
+//   }
+// };
 
 export const createTask = async (req, res) => {
   try {
@@ -29,7 +29,10 @@ export const createTask = async (req, res) => {
     req.body.creator_id = creator._id;
 
     // Extract the ObjectId for user
-    const user = await User.findOne({ externalId: req.body.user }, { _id: 1 });
+    const user = await User.findOne(
+      { externalId: req.body.user },
+      { _id: 1, name: 1 }
+    );
     if (!user) {
       return ResponseHandler.error(res, "User not found", 404);
     }
@@ -38,7 +41,7 @@ export const createTask = async (req, res) => {
     // Extract the ObjectId for project
     const project = await Project.findOne(
       { projectName: req.body.project },
-      { _id: 1 }
+      { _id: 1, projectName: 1 }
     );
     if (!project) {
       return ResponseHandler.error(res, "Project not found", 404);
@@ -48,42 +51,39 @@ export const createTask = async (req, res) => {
     // Extract the ObjectId for service
     const service = await Service.findOne(
       { serviceName: req.body.service },
-      { _id: 1 }
+      { _id: 1, serviceName: 1 }
     );
     if (!service) {
       return ResponseHandler.error(res, "Service not found", 404);
     }
     req.body.service = service._id;
 
-    // Parsing Dates
-    req.body.date = dateParser(req.body.date);
-    req.body.startDate = dateParser(req.body.startDate);
-    req.body.finishDate = dateParser(req.body.finishDate);
-    req.body.startTime = dateParser(req.body.startTime);
-    req.body.finishTime = dateParser(req.body.finishTime);
+    // **Generate Slug Using Populated Names**
+    const slug =
+      `${user.name}-${project.projectName}-${service.serviceName}-${req.body.purpose}`
+        .toLowerCase()
+        .replace(/\s+/g, "-"); // Converts to lowercase and replaces spaces with hyphens
 
-    if (req.body.startDate > req.body.finishDate) {
+    // **Check if a task with the same slug already exists**
+    const existingTask = await Task.findOne({ slug });
+
+    if (existingTask && existingTask.status !== "Completed") {
       return ResponseHandler.error(
         res,
-        "Start Date cannot be greater than Finish Date",
-        400
-      );
-    } else if (req.body.startTime >= req.body.finishTime) {
-      return ResponseHandler.error(
-        res,
-        "Start Time cannot be greater than equal to Finish Time",
+        "A task with the same purpose already exists and is not completed.",
         400
       );
     }
 
-    // console.log("Req body", req.body);
+    // Assign slug to request body
+    req.body.slug = slug;
 
     // Create the Task
     const task = await Task.create(req.body);
 
     return ResponseHandler.success(res, "Task created successfully", task, 201);
   } catch (error) {
-    logger.error("Error creating task:", error);
+    console.error("Error creating task:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };
@@ -135,6 +135,30 @@ export const getAllTasks = async (req, res) => {
       200
     );
   } catch (error) {
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const getTaskByTaskId = async (req, res) => {
+  try {
+    const taskId = req.params.taskId;
+
+    const task = await Task.findById(taskId).populate(
+      "creator_id user project service"
+    );
+
+    if (!task) {
+      return ResponseHandler.error(res, "Task not found", 404);
+    }
+
+    return ResponseHandler.success(
+      res,
+      "Task retrieved successfully",
+      task,
+      200
+    );
+  } catch (error) {
+    logger.error("Error retrieving task:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };
@@ -584,6 +608,181 @@ export const sendTaskForPDF = async (req, res) => {
     return res.status(500).json({
       statusCode: 500,
       message: "Failed to export tasks to PDF",
+      exception: error,
+      data: null,
+    });
+  }
+};
+
+export const continueTaskTomorrow = async (req, res) => {
+  try {
+    const { taskId } = req.body;
+
+    if (!taskId) {
+      return ResponseHandler.error(res, "Task ID is required", 400);
+    }
+
+    // Find the existing task by ID
+    const existingTask = await Task.findById(taskId);
+
+    if (!existingTask) {
+      return ResponseHandler.error(res, "Task not found", 404);
+    }
+
+    // Check if the task has Finish Date & Finish Time
+    if (existingTask.finishDate && existingTask.finishTime) {
+      return ResponseHandler.error(
+        res,
+        "This task is already forwarded. It cannot be continued.",
+        400
+      );
+    }
+
+    // **Use the slug from the existing task**
+    const { slug } = existingTask;
+
+    // Check if any task under the same module (slug) is already marked "Completed"
+    const isModuleCompleted = await Task.exists({
+      slug: slug,
+      status: "Completed",
+    });
+
+    if (isModuleCompleted) {
+      return ResponseHandler.error(
+        res,
+        "Another task in this module is already completed. This task cannot be continued.",
+        400
+      );
+    }
+
+    // Get the current date & time (store in UTC but convert to IST for calculations)
+    const currentDateTime = moment().tz("Asia/Kolkata");
+
+    // Update the existing task with finishDate & finishTime (Stored in UTC)
+    existingTask.finishDate = currentDateTime.utc().toISOString(); // Save as UTC ISO string
+    existingTask.finishTime = currentDateTime.utc().toISOString();
+    await existingTask.save();
+
+    // **Fix: Get the correct next day's start date**
+    const nextDayStartDate = moment()
+      .tz("Asia/Kolkata")
+      .add(1, "day")
+      .startOf("day");
+
+    console.log("Next Day Start Date:", nextDayStartDate.format()); // Debugging log
+    console.log("Current DateTime:", currentDateTime.format());
+
+    // Set start time for the next day (9 AM IST)
+    const nextDayStartTime = moment
+      .tz(nextDayStartDate, "Asia/Kolkata")
+      .set({ hour: 9, minute: 0, second: 0 });
+
+    // Convert to UTC before storing
+    const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
+
+    const newTask = new Task({
+      creator_role: existingTask.creator_role,
+      creator_id: existingTask.creator_id,
+      date: currentDateTime.utc().toISOString(), // Ensure to store date in UTC format
+      user: existingTask.user,
+      project: existingTask.project,
+      service: existingTask.service,
+      purpose: existingTask.purpose,
+      slug: slug, // Use existing slug
+      startDate: nextDayStartTimeUTC,
+      startTime: nextDayStartTimeUTC,
+      finishDate: null,
+      finishTime: null,
+      status: "Ongoing",
+    });
+
+    await newTask.save();
+
+    return ResponseHandler.success(
+      res,
+      "Task successfully continued for tomorrow",
+      newTask,
+      200
+    );
+  } catch (error) {
+    console.error("Error in continuing task for tomorrow:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const markTaskAsComplete = async (req, res) => {
+  try {
+    const { taskId } = req.body;
+
+    if (!taskId) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "Task ID is required",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Find the task by ID
+    const existingTask = await Task.findById(taskId);
+
+    if (!existingTask) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "Task not found",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // **Use the slug from the existing task**
+    const { slug } = existingTask;
+
+    // Check if any other task under the same module (slug) is already "Completed"
+    const isModuleCompleted = await Task.exists({
+      slug: slug,
+      status: "Completed",
+    });
+
+    if (isModuleCompleted) {
+      return res.status(400).json({
+        statusCode: 400,
+        message:
+          "Another task in this module is already completed. This task cannot be marked as completed.",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Ensure the task is still "Ongoing"
+    if (existingTask.status === "Completed") {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "This task is already completed.",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Get the current date & time in IST
+    const currentDateTime = moment().tz("Asia/Kolkata");
+
+    // Mark only this task as "Completed"
+    existingTask.status = "Completed";
+    existingTask.finishDate = currentDateTime.toDate();
+    existingTask.finishTime = currentDateTime.toDate();
+    await existingTask.save();
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: "Task successfully marked as Completed.",
+      data: existingTask,
+    });
+  } catch (error) {
+    console.error("Error marking task as complete:", error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Failed to mark task as complete",
       exception: error,
       data: null,
     });
