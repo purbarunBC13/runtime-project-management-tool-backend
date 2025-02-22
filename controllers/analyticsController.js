@@ -171,14 +171,46 @@ export const getWorkDurationByProject = async (req, res) => {
       },
       { $unwind: "$project" },
       {
+        $project: {
+          projectName: "$project.projectName",
+          startTime: {
+            $dateFromParts: {
+              year: 1970,
+              month: 1,
+              day: 1, // Placeholder Date
+              hour: { $hour: { $toDate: "$startTime" } },
+              minute: { $minute: { $toDate: "$startTime" } },
+              second: { $second: { $toDate: "$startTime" } },
+            },
+          },
+          finishTime: {
+            $cond: {
+              if: { $ne: ["$finishTime", null] },
+              then: {
+                $dateFromParts: {
+                  year: 1970,
+                  month: 1,
+                  day: 1, // Placeholder Date
+                  hour: { $hour: { $toDate: "$finishTime" } },
+                  minute: { $minute: { $toDate: "$finishTime" } },
+                  second: { $second: { $toDate: "$finishTime" } },
+                },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+      {
         $group: {
-          _id: "$project.projectName",
+          _id: "$projectName",
           totalDuration: {
             $sum: {
-              $subtract: [
-                { $toDate: "$finishTime" },
-                { $toDate: "$startTime" },
-              ],
+              $cond: {
+                if: { $ne: ["$finishTime", null] },
+                then: { $subtract: ["$finishTime", "$startTime"] },
+                else: 0,
+              },
             },
           },
         },
