@@ -6,19 +6,13 @@ import moment from "moment-timezone";
 export const startTaskCronJob = () => {
   console.log("✅ Cron job initialized...");
 
-  cron.schedule("40 12 * * *", async () => {
+  cron.schedule("34 17 * * *", async () => {
     console.log("🚀 Running task update job at 12 AM IST...");
 
     try {
       // Get yesterday's start and end date in IST
-      const yesterdayStart = moment()
-        .tz("Asia/Kolkata")
-        .subtract(1, "day")
-        .startOf("day");
-      const yesterdayEnd = moment()
-        .tz("Asia/Kolkata")
-        .subtract(1, "day")
-        .endOf("day");
+      const yesterdayStart = moment().utc().subtract(1, "day").startOf("day");
+      const yesterdayEnd = moment().utc().subtract(1, "day").endOf("day");
 
       // Set finish time to 8 PM IST yesterday
       const finishTime = moment()
@@ -34,8 +28,8 @@ export const startTaskCronJob = () => {
       const tasks = await Task.find({
         status: "Ongoing",
         startDate: {
-          $gte: yesterdayStart.utc().toISOString(),
-          $lte: yesterdayEnd.utc().toISOString(),
+          $gte: yesterdayStart.format(),
+          $lte: yesterdayEnd.format(),
         },
         finishDate: null,
         finishTime: null,
@@ -63,26 +57,23 @@ export const startTaskCronJob = () => {
       );
 
       // **Create Ongoing Task for Today (Starting at 9 AM IST)**
-      const todayStart = moment()
-        .tz("Asia/Kolkata")
-        .startOf("day")
-        .add(1, "day");
+      const todayStart = moment().utc().startOf("day");
       const todayStartTime = moment(todayStart)
         .tz("Asia/Kolkata")
-        .set({ hour: 9, minute: 0, second: 0 });
+        .set({ hour: 10, minute: 30, second: 0 });
 
       for (const task of tasks) {
         const newTask = new Task({
           creator_role: task.creator_role,
           creator_id: task.creator_id,
-          date: todayStart.utc().toISOString(),
+          date: todayStart.toISOString(),
           user: task.user,
           project: task.project,
           service: task.service,
           purpose: task.purpose,
           slug: task.slug, // Keep the same slug
-          startDate: todayStart.utc().toISOString(),
-          startTime: todayStartTime.utc().toISOString(),
+          startDate: todayStart.toISOString(),
+          startTime: todayStartTime.toISOString(),
           finishDate: null,
           finishTime: null,
           status: "Ongoing",

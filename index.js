@@ -18,7 +18,7 @@ import serviceRoutes from "./routers/serviceRoutes.js";
 import projectRoutes from "./routers/projectRoutes.js";
 import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
 import analyticsRoutes from "./routers/analyticsRouter.js";
-import { startTaskCronJob } from "./utils/cornjob.js";
+import { startTaskCronJob } from "./utils/cronjob.js";
 
 const app = express();
 

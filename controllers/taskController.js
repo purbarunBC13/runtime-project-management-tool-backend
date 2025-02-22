@@ -53,6 +53,7 @@ export const createTask = async (req, res) => {
       { serviceName: req.body.service },
       { _id: 1, serviceName: 1 }
     );
+
     if (!service) {
       return ResponseHandler.error(res, "Service not found", 404);
     }
@@ -79,10 +80,10 @@ export const createTask = async (req, res) => {
     req.body.slug = slug;
 
     // Convert the startDate and startTime to IST format
-    const startDate = moment(req.body.startDate).tz("Asia/Kolkata").toDate();
-    // req.body.startTime = moment(req.body.startTime).tz("Asia/Kolkata").toDate();
+    // const startDate = moment(req.body.startDate).tz("Asia/Kolkata").toDate();
+    // // req.body.startTime = moment(req.body.startTime).tz("Asia/Kolkata").toDate();
 
-    console.log(startDate);
+    // console.log(startDate);
 
     // Create the Task
     const task = await Task.create(req.body);
@@ -688,7 +689,7 @@ export const continueTaskTomorrow = async (req, res) => {
       // Set start time for the next day (9 AM IST)
       const nextDayStartTime = moment(nextDayStartDate)
         .tz("Asia/Kolkata")
-        .set({ hour: 9, minute: 0, second: 0 });
+        .set({ hour: 10, minute: 30, second: 0 });
 
       // Convert to UTC before storing
       // const nextDayStartDateUTC = nextDayStartDate.utc().toISOString();
@@ -780,15 +781,14 @@ export const markTaskAsComplete = async (req, res) => {
       );
     }
 
-    // check if
-
     // Get the current date & time in IST
     const currentDateTime = moment().tz("Asia/Kolkata");
 
-    const taskStartDate = moment(existingTask.startDate)
-      .tz("Asia/Kolkata")
-      .format("YYYY-MM-DD");
+    const taskStartDate = moment(existingTask.startDate).format("YYYY-MM-DD");
     const todayDate = currentDateTime.format("YYYY-MM-DD");
+
+    console.log("Task Start Date:", taskStartDate);
+    console.log("Today's Date:", todayDate);
 
     if (taskStartDate > todayDate) {
       return ResponseHandler.error(
