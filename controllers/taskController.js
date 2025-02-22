@@ -753,6 +753,15 @@ export const markTaskAsComplete = async (req, res) => {
       return ResponseHandler.error(res, "Task not found", 404);
     }
 
+    // Ensure the task is still "Ongoing"
+    if (existingTask.status === "Completed") {
+      return ResponseHandler.error(
+        res,
+        "This task is already marked as completed.",
+        400
+      );
+    }
+
     // **Use the slug from the existing task**
     const { slug } = existingTask;
 
@@ -766,15 +775,6 @@ export const markTaskAsComplete = async (req, res) => {
       return ResponseHandler.error(
         res,
         "Another task under this module is already completed. You cannot complete this task.",
-        400
-      );
-    }
-
-    // Ensure the task is still "Ongoing"
-    if (existingTask.status === "Completed") {
-      return ResponseHandler.error(
-        res,
-        "This task is already marked as completed.",
         400
       );
     }
