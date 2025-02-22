@@ -691,13 +691,14 @@ export const continueTaskTomorrow = async (req, res) => {
         .set({ hour: 9, minute: 0, second: 0 });
 
       // Convert to UTC before storing
-      const nextDayStartDateUTC = nextDayStartDate.utc().toISOString();
+      // const nextDayStartDateUTC = nextDayStartDate.utc().toISOString();
+
       const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
 
       const newTask = new Task({
         creator_role: existingTask.creator_role,
         creator_id: existingTask.creator_id,
-        date: nextDayStartDateUTC, // Set the correct start date for the next day
+        date: nextDayStartTimeUTC, // Set the correct start date for the next day
         user: existingTask.user,
         project: existingTask.project,
         service: existingTask.service,
