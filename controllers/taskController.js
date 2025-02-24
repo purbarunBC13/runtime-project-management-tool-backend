@@ -634,7 +634,7 @@ export const continueTaskTomorrow = async (req, res) => {
     const existingTask = await Task.findById(taskId);
 
     if (existingTask.finishDate && existingTask.finishTime) {
-      ResponseHandler.error(
+      return ResponseHandler.error(
         res,
         "This task is already frowarded to next day.",
         400
