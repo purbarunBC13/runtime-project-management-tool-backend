@@ -342,6 +342,7 @@ export const getTasksByCreatorId = async (req, res) => {
 };
 
 export const sendTaskForExcel = async (req, res) => {
+  console.log("External ID:", req.externalId);
   try {
     const { userName } = req.query;
 
@@ -430,7 +431,7 @@ export const sendTaskForExcel = async (req, res) => {
     res.attachment(`tasks_${userName}.csv`);
     res.status(200).send(csv);
   } catch (error) {
-    console.error(error);
+    console.error(error + "Error exporting tasks to CSV");
     return res.status(500).json({
       statusCode: 500,
       message: "Failed to export tasks",

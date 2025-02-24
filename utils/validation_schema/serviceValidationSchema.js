@@ -28,8 +28,8 @@ export const serviceValidationSchema = z.object({
     .min(5, {
       message: "Service description must be at least 5 characters long",
     })
-    .max(100, {
-      message: "Service description must be at most 100 characters long",
+    .max(10000, {
+      message: "Service description must be at most 10000 characters long",
     })
     .nonempty({
       message: "Service description cannot be empty",

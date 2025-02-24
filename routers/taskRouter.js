@@ -47,7 +47,7 @@ taskRouter.get(
 );
 
 taskRouter.get(
-  "/:taskId",
+  "/get/:taskId",
   verifyToken,
   checkPermission("read_task"),
   getTaskByTaskId
