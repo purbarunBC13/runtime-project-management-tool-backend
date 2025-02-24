@@ -4,7 +4,7 @@ import ResponseHandler from "../utils/responseHandler.js";
 
 export const createProject = async (req, res) => {
   try {
-    const projectName = req.body.projectName;
+    const projectName = req.body.projectName.trim();
     const projectExists = await Project.findOne({ projectName });
     if (projectExists) {
       return ResponseHandler.error(
@@ -13,7 +13,8 @@ export const createProject = async (req, res) => {
         400
       );
     }
-    const project = await Project.create(req.body);
+    const projectData = { ...req.body, projectName };
+    const project = await Project.create(projectData);
     // logger.info(`Project created: ${project}`);
     return ResponseHandler.success(
       res,

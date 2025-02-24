@@ -5,7 +5,7 @@ import ResponseHandler from "../utils/responseHandler.js";
 
 export const createService = async (req, res) => {
   try {
-    const projectName = req.body.project;
+    const projectName = req.body.project.trim();
 
     const existingProject = await Project.findOne({ projectName });
 
@@ -16,7 +16,7 @@ export const createService = async (req, res) => {
     req.body.project = existingProject._id;
 
     const existingService = await Service.findOne({
-      serviceName: req.body.serviceName,
+      serviceName: req.body.serviceName.trim(),
       project: req.body.project,
     });
 
@@ -24,7 +24,11 @@ export const createService = async (req, res) => {
       return ResponseHandler.error(res, "Service already exists", 400);
     }
 
-    const service = await Service.create(req.body);
+    const serviceData = {
+      ...req.body,
+      serviceName: req.body.serviceName.trim(),
+    };
+    const service = await Service.create(serviceData);
     return ResponseHandler.success(
       res,
       "Service Created Successfully",

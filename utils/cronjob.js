@@ -9,6 +9,11 @@ export const startTaskCronJob = () => {
   cron.schedule("0 0 * * *", async () => {
     console.log("🚀 Running task update job at 12 AM IST...");
 
+    const day = moment().utc().day();
+    if (day === 1) {
+      console.log("🚀 It was Sunday, no tasks to update.", day);
+      return;
+    }
     try {
       // Get yesterday's start and end date in IST
       const yesterdayStart = moment().utc().subtract(1, "day").startOf("day");
@@ -57,7 +62,12 @@ export const startTaskCronJob = () => {
       );
 
       // **Create Ongoing Task for Today (Starting at 9 AM IST)**
-      const todayStart = moment().utc().startOf("day");
+      let todayStart;
+      if (day === 0) {
+        todayStart = moment().utc().add(1, "day").startOf("day");
+      } else {
+        todayStart = moment().utc().startOf("day");
+      }
       const todayStartTime = moment(todayStart)
         .tz("Asia/Kolkata")
         .set({ hour: 10, minute: 30, second: 0 });
