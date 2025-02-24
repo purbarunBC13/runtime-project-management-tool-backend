@@ -633,6 +633,14 @@ export const continueTaskTomorrow = async (req, res) => {
     // Find the existing task by ID
     const existingTask = await Task.findById(taskId);
 
+    if (existingTask.finishDate && existingTask.finishTime) {
+      ResponseHandler.error(
+        res,
+        "This task is already marked. It cannot be continued.",
+        400
+      );
+    }
+
     if (!existingTask) {
       return ResponseHandler.error(res, "Task not found", 404);
     }
@@ -763,6 +771,14 @@ export const markTaskAsComplete = async (req, res) => {
 
     // Find the task by ID
     const existingTask = await Task.findById(taskId);
+
+    if (existingTask.finishDate && existingTask.finishTime) {
+      return ResponseHandler.error(
+        res,
+        "This task is already marked as completed.",
+        400
+      );
+    }
 
     if (!existingTask) {
       return ResponseHandler.error(res, "Task not found", 404);
