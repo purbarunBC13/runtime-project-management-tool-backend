@@ -6,7 +6,7 @@ import moment from "moment-timezone";
 export const startTaskCronJob = () => {
   console.log("✅ Cron job initialized...");
 
-  cron.schedule("34 17 * * *", async () => {
+  cron.schedule("0 0 * * *", async () => {
     console.log("🚀 Running task update job at 12 AM IST...");
 
     try {
