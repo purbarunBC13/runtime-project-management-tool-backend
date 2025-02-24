@@ -636,7 +636,7 @@ export const continueTaskTomorrow = async (req, res) => {
     if (existingTask.finishDate && existingTask.finishTime) {
       ResponseHandler.error(
         res,
-        "This task is already marked. It cannot be continued.",
+        "This task is already frowarded to next day.",
         400
       );
     }
@@ -775,7 +775,7 @@ export const markTaskAsComplete = async (req, res) => {
     if (existingTask.finishDate && existingTask.finishTime) {
       return ResponseHandler.error(
         res,
-        "This task is already marked as completed.",
+        "This task is already forwarded to next day.",
         400
       );
     }
