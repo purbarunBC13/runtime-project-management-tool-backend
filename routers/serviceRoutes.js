@@ -5,6 +5,7 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 
 import {
   createService,
+  deleteService,
   getAllServices,
   getServicesByProjectName,
 } from "../controllers/serviceController.js";
@@ -31,6 +32,13 @@ serviceRouter.get(
   verifyToken,
   checkPermission("read_services"),
   getServicesByProjectName
+);
+
+serviceRouter.delete(
+  "/delete/:serviceId",
+  verifyToken,
+  checkPermission("delete_services"),
+  deleteService
 );
 
 export default serviceRouter;

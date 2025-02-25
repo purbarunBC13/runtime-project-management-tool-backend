@@ -4,6 +4,7 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 import { projectTypeDescValidation } from "../middlewares/validations/projectTypeDescValidation.js";
 import {
   createProjectTypeDesc,
+  deleteProjectTypeDesc,
   getAllProjectTypeDesc,
 } from "../controllers/projectTypeDescController.js";
 
@@ -24,4 +25,10 @@ projectTypeDescRouter.get(
   getAllProjectTypeDesc
 );
 
+projectTypeDescRouter.delete(
+  "/delete/:projectTypeDescId",
+  verifyToken,
+  checkPermission("delete_project_type_description"),
+  deleteProjectTypeDesc
+);
 export default projectTypeDescRouter;

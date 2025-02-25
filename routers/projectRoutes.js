@@ -5,6 +5,7 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 
 import {
   createProject,
+  deleteProject,
   getAllProjectNames,
   getAllProjects,
 } from "../controllers/projectController.js";
@@ -31,6 +32,13 @@ projectRouter.get(
   verifyToken,
   checkPermission("read_projects"),
   getAllProjects
+);
+
+projectRouter.delete(
+  "/delete/:projectId",
+  verifyToken,
+  checkPermission("delete_projects"),
+  deleteProject
 );
 
 export default projectRouter;

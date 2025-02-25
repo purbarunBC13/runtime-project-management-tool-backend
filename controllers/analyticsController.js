@@ -3,6 +3,7 @@ import User from "../models/userSchema.js";
 import moment from "moment";
 import ResponseHandler from "../utils/responseHandler.js";
 import Project from "../models/projectSchema.js";
+import { fill } from "pdfkit";
 
 export const getTaskByStatus = async (req, res) => {
   try {
@@ -30,26 +31,48 @@ export const getTaskByStatus = async (req, res) => {
       return ResponseHandler.error(res, "User not found", 404);
     }
 
-    const tasks = await Task.aggregate([
-      { $match: { user: userId._id } },
+    const moduleStats = await Task.aggregate([
+      { $match: { user: userId._id } }, // Filter tasks by user
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+          _id: "$slug", // Group by module (slug)
+          hasCompleted: {
+            $max: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] }, // 1 if at least one task is "Completed"
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          completedModules: {
+            $sum: { $cond: [{ $eq: ["$hasCompleted", 1] }, 1, 0] }, // Count modules as Completed
+          },
+          ongoingModules: {
+            $sum: { $cond: [{ $eq: ["$hasCompleted", 0] }, 1, 0] }, // Count modules as Ongoing
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          completedModules: 1,
+          ongoingModules: 1,
         },
       },
     ]);
 
-    const responsePayload = tasks.map((task) => ({
-      status: task._id,
-      count: task.count,
-      fill:
-        task._id === "completed"
-          ? "var(--color-completed)"
-          : task._id === "ongoing"
-          ? "var(--color-ongoing)"
-          : "var(--color-initiated)",
-    }));
+    const responsePayload = [
+      {
+        status: "Completed",
+        count: moduleStats[0].completedModules,
+        fill: "green",
+      },
+      {
+        status: "Ongoing",
+        count: moduleStats[0].ongoingModules,
+        fill: "red",
+      },
+    ];
 
     const totalTasks = responsePayload.reduce(
       (acc, curr) => acc + curr.count,

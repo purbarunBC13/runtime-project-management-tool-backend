@@ -105,3 +105,32 @@ export const getAllProjectTypeDesc = async (req, res) => {
     );
   }
 };
+
+export const deleteProjectTypeDesc = async (req, res) => {
+  try {
+    const projectTypeDesc = await ProjectTypeDesc.findById(
+      req.params.projectTypeDescId
+    );
+    if (!projectTypeDesc) {
+      return ResponseHandler.error(
+        res,
+        "Project Type Description not found",
+        404
+      );
+    }
+
+    await projectTypeDesc.deleteOne();
+    return ResponseHandler.success(
+      res,
+      "Project Type Description deleted successfully"
+    );
+  } catch (error) {
+    logger.error("Failed to delete Project Type Description", error);
+    return ResponseHandler.error(
+      res,
+      "Failed to delete Project Type Description",
+      500,
+      error
+    );
+  }
+};

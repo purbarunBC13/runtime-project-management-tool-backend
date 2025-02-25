@@ -1,5 +1,6 @@
 import Project from "../models/projectSchema.js";
 import Service from "../models/serviceSchema.js";
+import Task from "../models/taskSchema.js";
 import { logger } from "../utils/logger.js";
 import ResponseHandler from "../utils/responseHandler.js";
 
@@ -141,5 +142,29 @@ export const getServicesByProjectName = async (req, res) => {
   } catch (error) {
     logger.error("Error getting service:", error);
     return ResponseHandler.error(res, "Failed to get service", 500, error);
+  }
+};
+
+export const deleteService = async (req, res) => {
+  try {
+    const service = await Service.findById(req.params.serviceId);
+    if (!service) {
+      return ResponseHandler.error(res, "Service not found", 404);
+    }
+
+    const tasksWithService = await Task.find({ service: service._id });
+    if (tasksWithService.length) {
+      return ResponseHandler.error(
+        res,
+        "Cannot delete service with associated tasks",
+        400
+      );
+    }
+
+    await service.deleteOne();
+    return ResponseHandler.success(res, "Service deleted successfully", 200);
+  } catch (error) {
+    logger.error("Error deleting service:", error);
+    return ResponseHandler.error(res, "Failed to delete service", 500, error);
   }
 };
