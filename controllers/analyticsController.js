@@ -3,7 +3,6 @@ import User from "../models/userSchema.js";
 import moment from "moment";
 import ResponseHandler from "../utils/responseHandler.js";
 import Project from "../models/projectSchema.js";
-import { fill } from "pdfkit";
 
 export const getTaskByStatus = async (req, res) => {
   try {
