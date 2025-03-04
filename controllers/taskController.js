@@ -101,6 +101,7 @@ export const getAllTasks = async (req, res) => {
     // const limit = parseInt(req.query.limit) || 10;
 
     const projectName = req.query.projectName;
+    const userName = req.query.userName;
 
     const filter = {};
 
@@ -110,6 +111,14 @@ export const getAllTasks = async (req, res) => {
         return ResponseHandler.error(res, "Project not found", 404);
       }
       filter.project = project._id;
+    }
+
+    if (userName) {
+      const user = await User.findOne({ name: userName }, { _id: 1 });
+      if (!user) {
+        return ResponseHandler.error(res, "User not found", 404);
+      }
+      filter.user = user._id;
     }
 
     const tasks = await Task.find(filter)
