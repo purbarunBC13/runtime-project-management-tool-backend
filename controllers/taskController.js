@@ -351,7 +351,7 @@ export const getTasksByCreatorId = async (req, res) => {
 };
 
 export const sendTaskForExcel = async (req, res) => {
-  console.log("External ID:", req.externalId);
+  // console.log("External ID:", req.externalId);
   try {
     const { userName } = req.query;
 
@@ -365,7 +365,12 @@ export const sendTaskForExcel = async (req, res) => {
     // }
 
     // Find the user by userName
-    const user = await User.findOne({ externalId: req.externalId });
+    let user;
+    if (userName) {
+      user = await User.findOne({ name: userName }); // Find user by name
+    } else {
+      user = await User.findOne({ externalId: req.externalId });
+    }
 
     if (!user) {
       return res.status(404).json({
@@ -392,10 +397,9 @@ export const sendTaskForExcel = async (req, res) => {
 
     // Convert timestamps to IST and format data
     const tasksWithIST = tasks.map((task) => ({
-      "Task ID": task._id.toString(),
       "Creator Role": task.creator_role,
       "Creator Name": task.creator_id.name,
-      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss"),
+      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD"),
       "Assigned User": user.name, // Directly from user object
       Project: task.project?.projectName || "N/A",
       Service: task.service?.serviceName || "N/A",
@@ -406,18 +410,17 @@ export const sendTaskForExcel = async (req, res) => {
       "Start Time": moment(task.startTime)
         .tz("Asia/Kolkata")
         .format("HH:mm:ss"),
-      "Finish Date": moment(task.finishDate)
-        .tz("Asia/Kolkata")
-        .format("YYYY-MM-DD"),
-      "Finish Time": moment(task.finishTime)
-        .tz("Asia/Kolkata")
-        .format("HH:mm:ss"),
+      "Finish Date": task.finishDate
+        ? moment(task.finishDate).tz("Asia/Kolkata").format("YYYY-MM-DD")
+        : "Pending",
+      "Finish Time": task.finishTime
+        ? moment(task.finishTime).tz("Asia/Kolkata").format("HH:mm:ss")
+        : "Pending",
       Status: task.status,
     }));
 
     // Define CSV fields
     const fields = [
-      "Task ID",
       "Creator Role",
       "Creator Name",
       "Date",
@@ -437,7 +440,7 @@ export const sendTaskForExcel = async (req, res) => {
     const csv = json2csvParser.parse(tasksWithIST);
 
     // Send file as response
-    res.attachment(`tasks_${userName}.csv`);
+    res.attachment(`tasks_${user.name}.csv`);
     res.status(200).send(csv);
   } catch (error) {
     console.error(error + "Error exporting tasks to CSV");
@@ -464,7 +467,12 @@ export const sendTaskForPDF = async (req, res) => {
     // }
 
     // Find user by name
-    const user = await User.findOne({ externalId: req.externalId });
+    let user;
+    if (userName) {
+      user = await User.findOne({ name: userName }); // Find user by name
+    } else {
+      user = await User.findOne({ externalId: req.externalId });
+    }
 
     if (!user) {
       return res.status(404).json({
@@ -519,10 +527,12 @@ export const sendTaskForPDF = async (req, res) => {
       "Service",
       "Purpose",
       "Start Date",
+      "Start Time",
       "Finish Date",
+      "Finish Time",
       "Status",
     ];
-    const columnWidths = [80, 80, 120, 100, 120, 90, 90, 70];
+    const columnWidths = [80, 80, 80, 80, 120, 80, 50, 80, 70, 60];
 
     let y = doc.y + 10; // Initial Y position for table
 
@@ -555,8 +565,14 @@ export const sendTaskForPDF = async (req, res) => {
         task.project?.projectName || "N/A",
         task.service?.serviceName || "N/A",
         task.purpose,
-        moment(task.startDate).tz("Asia/Kolkata").format("MMMM Do YYYY"),
-        moment(task.finishDate).tz("Asia/Kolkata").format("MMMM Do YYYY"),
+        moment(task.startDate).tz("Asia/Kolkata").format("DD/MM/YY"),
+        moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+        task.finishDate
+          ? moment(task.finishDate).tz("Asia/Kolkata").format("DD/MM/YY")
+          : "Pending",
+        task.finishTime
+          ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+          : "Pending",
         task.status,
       ];
 
