@@ -122,10 +122,28 @@ export const getAllProjects = async (req, res) => {
       limit,
     };
 
+    const services = await Service.find({
+      project: { $in: projects.map((project) => project._id) },
+    });
+
+    // Put each service to its project
+    const projectsWithServices = projects.map((project) => {
+      const projectServices = services.filter(
+        (service) => service.project.toString() === project._id.toString()
+      );
+      // console.log("projectServices", projectServices);
+      return {
+        ...project.toObject(),
+        services: projectServices.map((service) => service.serviceName),
+      };
+    });
+
+    // console.log("projectsWithServices", projectsWithServices);
+
     return ResponseHandler.success(
       res,
       "All Projects",
-      { projects, paginationData },
+      { projectsWithServices, paginationData },
       200
     );
   } catch (error) {
