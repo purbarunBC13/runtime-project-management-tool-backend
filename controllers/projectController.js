@@ -143,7 +143,7 @@ export const getAllProjects = async (req, res) => {
     return ResponseHandler.success(
       res,
       "All Projects",
-      { projectsWithServices, paginationData },
+      { project: projectsWithServices, paginationData },
       200
     );
   } catch (error) {
