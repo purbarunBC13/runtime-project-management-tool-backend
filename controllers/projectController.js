@@ -126,15 +126,25 @@ export const getAllProjects = async (req, res) => {
       project: { $in: projects.map((project) => project._id) },
     });
 
+    const typeDesc = await ProjectTypeDesc.find({
+      project: { $in: projects.map((project) => project._id) },
+    }).populate("project");
+
     // Put each service to its project
     const projectsWithServices = projects.map((project) => {
       const projectServices = services.filter(
         (service) => service.project.toString() === project._id.toString()
       );
+      const projectTypeDesc = typeDesc.filter(
+        (typeDesc) => typeDesc.project._id.toString() === project._id.toString()
+      );
       // console.log("projectServices", projectServices);
       return {
         ...project.toObject(),
         services: projectServices.map((service) => service.serviceName),
+        projectTypeDesc: projectTypeDesc.map(
+          (typeDesc) => typeDesc.projectTypeDescription
+        ),
       };
     });
 
