@@ -19,6 +19,7 @@ import projectRoutes from "./routers/projectRoutes.js";
 import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
 import analyticsRoutes from "./routers/analyticsRouter.js";
 import { startTaskCronJob } from "./utils/cronjob.js";
+import { verifyToken } from "./middlewares/authMidlleware.js";
 
 const app = express();
 

@@ -11,10 +11,10 @@ import {
 } from "../controllers/projectController.js";
 
 const projectRouter = router.Router();
+projectRouter.use(verifyToken);
 
 projectRouter.post(
   "/create",
-  verifyToken,
   checkPermission("create_projects"),
   projectValidation,
   createProject
@@ -22,21 +22,14 @@ projectRouter.post(
 
 projectRouter.get(
   "/names",
-  verifyToken,
   checkPermission("read_projects"),
   getAllProjectNames
 );
 
-projectRouter.get(
-  "/all",
-  verifyToken,
-  checkPermission("read_projects"),
-  getAllProjects
-);
+projectRouter.get("/all", checkPermission("read_projects"), getAllProjects);
 
 projectRouter.delete(
   "/delete/:projectId",
-  verifyToken,
   checkPermission("delete_projects"),
   deleteProject
 );

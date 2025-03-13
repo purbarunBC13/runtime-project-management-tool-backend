@@ -373,12 +373,7 @@ export const sendTaskForExcel = async (req, res) => {
     }
 
     if (!user) {
-      return res.status(404).json({
-        statusCode: 404,
-        message: "User not found",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(res, "User not found", 404);
     }
 
     // Fetch only tasks assigned to the user
@@ -387,12 +382,7 @@ export const sendTaskForExcel = async (req, res) => {
     ); // Populate references
 
     if (!tasks.length) {
-      return res.status(404).json({
-        statusCode: 404,
-        message: "No tasks found for this user",
-        exception: null,
-        data: null,
-      });
+      return ResponseHandler.error(res, "No tasks found for this user", 404);
     }
 
     // Convert timestamps to IST and format data
@@ -444,12 +434,11 @@ export const sendTaskForExcel = async (req, res) => {
     res.status(200).send(csv);
   } catch (error) {
     console.error(error + "Error exporting tasks to CSV");
-    return res.status(500).json({
-      statusCode: 500,
-      message: "Failed to export tasks",
-      exception: error,
-      data: null,
-    });
+    return ResponseHandler.error(
+      res,
+      "Error exporting tasks to CSV: " + error.message,
+      400
+    );
   }
 };
 
@@ -638,12 +627,7 @@ export const sendTaskForPDF = async (req, res) => {
     doc.end();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      statusCode: 500,
-      message: "Failed to export tasks to PDF",
-      exception: error,
-      data: null,
-    });
+    return ResponseHandler.error(res, error.message, 400);
   }
 };
 
@@ -866,6 +850,238 @@ export const markTaskAsComplete = async (req, res) => {
     );
   } catch (error) {
     console.error("Error marking task as complete:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+//  TODO Export Task By Project
+
+export const exportTaskCsvByProject = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    if (!projectName) {
+      return ResponseHandler.error(res, "Project name is required", 400);
+    }
+
+    // Find the project by name
+    const project = await Project.findOne({ projectName });
+
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+
+    // Fetch tasks associated with the project
+    const tasks = await Task.find({ project: project._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return ResponseHandler.error(res, "No tasks found for this project", 404);
+    }
+
+    // Convert timestamps to IST and format data
+    const tasksWithIST = tasks.map((task) => ({
+      "Creator Role": task.creator_role,
+      "Creator Name": task.creator_id.name,
+      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD"),
+      "Assigned User": task.user.name,
+      Project: task.project?.projectName || "N/A",
+      Service: task.service?.serviceName || "N/A",
+      Purpose: task.purpose,
+      "Start Date": moment(task.startDate)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD"),
+      "Start Time": moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+      "Finish Date": task.finishDate
+        ? moment(task.finishDate).tz("Asia/Kolkata").format("YYYY-MM-DD")
+        : "Pending",
+      "Finish Time": task.finishTime
+        ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+        : "Pending",
+      Status: task.status,
+    }));
+
+    // Define CSV fields
+    const fields = [
+      "Creator Role",
+      "Creator Name",
+      "Date",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+
+    // Convert to CSV
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(tasksWithIST);
+
+    // Send file as response
+    res.attachment(`tasks_${projectName}.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error("Error exporting tasks by project:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const exportTaskPdfByProject = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    if (!projectName) {
+      return ResponseHandler.error(res, "Project name is required", 400);
+    }
+
+    // Find the project by name
+    const project = await Project.findOne({ projectName });
+
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+
+    // Fetch tasks associated with the project
+    const tasks = await Task.find({ project: project._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return ResponseHandler.error(res, "No tasks found for this project", 404);
+    }
+    // Create PDF document
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+      layout: "landscape",
+    });
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tasks_${projectName}.pdf`
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    doc.pipe(res); // Send PDF as response
+    // Title
+    doc
+      .fontSize(18)
+      .fillColor("#333333")
+      .text(`Task Report for ${projectName}`, { align: "center" })
+      .moveDown(1);
+    // Define Table Headers and Column Widths
+    const headers = [
+      "Creator",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+    const columnWidths = [80, 80, 80, 80, 120, 80, 50, 80, 70, 60];
+    let y = doc.y + 10; // Initial Y position for table
+    // Draw Table Headers with Background Color
+    doc
+      .rect(30, y, doc.page.width - 60, 25)
+      .fill("#007ACC")
+      .stroke();
+    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+    let x = 30;
+    headers.forEach((header, i) => {
+      doc.text(header, x + 5, y + 7, {
+        width: columnWidths[i],
+        align: "center",
+      });
+      x += columnWidths[i];
+    });
+    doc.fillColor("black").font("Helvetica").fontSize(9);
+    y += 25; // Move down for data rows
+    // Draw Table Rows with Dynamic Heights
+
+    tasks.forEach((task, index) => {
+      let x = 30;
+
+      const rowData = [
+        task.creator_id?.name || "N/A",
+        task.user.name,
+        task.project?.projectName || "N/A",
+        task.service?.serviceName || "N/A",
+        task.purpose,
+        moment(task.startDate).tz("Asia/Kolkata").format("DD/MM/YY"),
+        moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+        task.finishDate
+          ? moment(task.finishDate).tz("Asia/Kolkata").format("DD/MM/YY")
+          : "Pending",
+        task.finishTime
+          ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+          : "Pending",
+        task.status,
+      ];
+
+      // Determine the maximum row height based on text wrapping
+      let maxRowHeight = 0;
+      rowData.forEach((text, i) => {
+        let textHeight = doc.heightOfString(text, {
+          width: columnWidths[i] - 10,
+        });
+        maxRowHeight = Math.max(maxRowHeight, textHeight);
+      });
+
+      maxRowHeight += 10; // Add padding for readability
+
+      // Check for page overflow and add new page if needed
+      if (y + maxRowHeight > doc.page.height - 50) {
+        doc.addPage();
+        y = 50; // Reset Y position on new page
+
+        // Redraw the table headers on the new page
+        doc
+          .rect(30, y, doc.page.width - 60, 20)
+          .fill("#007ACC")
+          .stroke();
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+        let x = 30;
+        headers.forEach((header, i) => {
+          doc.text(header, x + 5, y + 7, {
+            width: columnWidths[i],
+            align: "center",
+          });
+          x += columnWidths[i];
+        });
+
+        doc.fillColor("black").font("Helvetica").fontSize(9);
+        y += 25; // Move down for data rows
+      }
+
+      // Alternate row colors for better readability
+      if (index % 2 === 0) {
+        doc
+          .rect(30, y, doc.page.width - 60, maxRowHeight)
+          .fill("#F3F3F3")
+          .stroke();
+      }
+      doc.fillColor("black");
+      // Draw Text in each column with adjusted row height
+      x = 30;
+      rowData.forEach((text, i) => {
+        doc.text(text, x + 5, y + 5, {
+          width: columnWidths[i] - 10,
+          align: "center",
+        });
+        x += columnWidths[i];
+      });
+      y += maxRowHeight; // Move down for the next row
+    });
+    doc.end();
+  } catch (error) {
+    console.error("Error exporting tasks by project:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };

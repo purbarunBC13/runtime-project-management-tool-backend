@@ -11,13 +11,15 @@ import {
   markTaskAsComplete,
   sendTaskForExcel,
   sendTaskForPDF,
+  exportTaskCsvByProject,
+  exportTaskPdfByProject,
 } from "../controllers/taskController.js";
 
 const taskRouter = express.Router();
+taskRouter.use(verifyToken);
 
 taskRouter.post(
   "/create",
-  verifyToken,
   checkPermission("create_task"),
   taskValidation,
   createTask
@@ -25,46 +27,35 @@ taskRouter.post(
 
 taskRouter.patch(
   "/continue-tomorrow",
-  verifyToken,
   checkPermission("update_task"),
   continueTaskTomorrow
 );
 
 taskRouter.patch(
   "/mark-completed",
-  verifyToken,
   checkPermission("update_task"),
   markTaskAsComplete
 );
 
-taskRouter.get("/all", verifyToken, checkPermission("read_tasks"), getAllTasks);
+taskRouter.get("/all", checkPermission("read_tasks"), getAllTasks);
+
+taskRouter.get("/get-by-user", checkPermission("read_task"), getTasksByUserId);
+
+taskRouter.get("/get/:taskId", checkPermission("read_task"), getTaskByTaskId);
+
+taskRouter.get("/export-csv", checkPermission("read_task"), sendTaskForExcel);
+
+taskRouter.get("/export-pdf", checkPermission("read_task"), sendTaskForPDF);
 
 taskRouter.get(
-  "/get-by-user",
-  verifyToken,
-  checkPermission("read_task"),
-  getTasksByUserId
+  "/export-csv-by-project/:projectName",
+  checkPermission("read_tasks"),
+  exportTaskCsvByProject
 );
-
 taskRouter.get(
-  "/get/:taskId",
-  verifyToken,
-  checkPermission("read_task"),
-  getTaskByTaskId
-);
-
-taskRouter.get(
-  "/export-csv",
-  verifyToken,
-  checkPermission("read_task"),
-  sendTaskForExcel
-);
-
-taskRouter.get(
-  "/export-pdf",
-  verifyToken,
-  checkPermission("read_task"),
-  sendTaskForPDF
+  "/export-pdf-by-project/:projectName",
+  checkPermission("read_tasks"),
+  exportTaskPdfByProject
 );
 
 // TODO: Get Tasks by User for Admin

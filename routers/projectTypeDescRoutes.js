@@ -10,9 +10,10 @@ import {
 
 const projectTypeDescRouter = express.Router();
 
+projectTypeDescRouter.use(verifyToken);
+
 projectTypeDescRouter.post(
   "/create",
-  verifyToken,
   checkPermission("create_project_type_description"),
   projectTypeDescValidation,
   createProjectTypeDesc
@@ -20,14 +21,12 @@ projectTypeDescRouter.post(
 
 projectTypeDescRouter.get(
   "/all",
-  verifyToken,
   checkPermission("read_project_type_description"),
   getAllProjectTypeDesc
 );
 
 projectTypeDescRouter.delete(
   "/delete/:projectTypeDescId",
-  verifyToken,
   checkPermission("delete_project_type_description"),
   deleteProjectTypeDesc
 );
