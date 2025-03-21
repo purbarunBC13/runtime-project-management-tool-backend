@@ -5,12 +5,21 @@ dotenv.config({
 
 import express from "express";
 import cors from "cors";
-import { logger } from "./utils/logger.js";
 import connectDB from "./config/db.config.js";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import ResponseHandler from "./utils/responseHandler.js";
 // import "colors/index.js";
+
+import taskRoutes from "./routers/taskRouter.js";
+import authRoutes from "./routers/authRoutes.js";
+import userRoutes from "./routers/userRouter.js";
+import serviceRoutes from "./routers/serviceRoutes.js";
+import projectRoutes from "./routers/projectRoutes.js";
+import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
+import analyticsRoutes from "./routers/analyticsRouter.js";
+import { startTaskCronJob } from "./utils/cronjob.js";
+import { verifyToken } from "./middlewares/authMidlleware.js";
 
 const app = express();
 
@@ -74,31 +83,19 @@ app.get("/favicon.ico", (req, res) => {
   return ResponseHandler.success(res, "Fevicon Checked");
 });
 
-import taskRoutes from "./routers/taskRouter.js";
 app.use("/api/v1/task", taskRoutes);
-
-import authRoutes from "./routers/authRoutes.js";
 app.use("/api/v1/auth", authRoutes);
-
-import userRoutes from "./routers/userRouter.js";
 app.use("/api/v1/user", userRoutes);
-
-import projectRoutes from "./routers/projectRoutes.js";
 app.use("/api/v1/project", projectRoutes);
-
-import serviceRoutes from "./routers/serviceRoutes.js";
 app.use("/api/v1/service", serviceRoutes);
-
-import projectTypeDescRoutes from "./routers/projectTypeDescRoutes.js";
 app.use("/api/v1/projectTypeDesc", projectTypeDescRoutes);
-
-import analyticsRoutes from "./routers/analyticsRouter.js";
 app.use("/api/v1/analytics", analyticsRoutes);
 
 //* Connect to MongoDB
 connectDB()
   .then(() => {
     console.log("Connected to MongoDB");
+    startTaskCronJob();
   })
   .catch((error) => {
     console.log(`MongoDB connection error: ${error}`);

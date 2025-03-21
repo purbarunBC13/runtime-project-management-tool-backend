@@ -11,37 +11,34 @@ import {
 
 const analyticsRouter = express.Router();
 
+analyticsRouter.use(verifyToken);
+
 analyticsRouter.get(
   "/task-per-status",
-  verifyToken,
   checkPermission("read_analytics"),
   getTaskByStatus
 );
 
 analyticsRouter.get(
   "/task-per-project",
-  verifyToken,
   checkPermission("read_analytics"),
   getTaskPerProject
 );
 
 analyticsRouter.get(
   "/project-work-duration",
-  verifyToken,
   checkPermission("read_analytics"),
   getWorkDurationByProject
 );
 
 analyticsRouter.get(
   "/no-of-user-per-project",
-  verifyToken,
   checkPermission("read_analytics"),
   getNoOfUsersByProject
 );
 
 analyticsRouter.get(
   "/project-duration",
-  verifyToken,
   checkPermission("read_analytics"),
   getProjectDateAnalytics
 );

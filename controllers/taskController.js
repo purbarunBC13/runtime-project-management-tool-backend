@@ -4,14 +4,17 @@ import Task from "../models/taskSchema.js";
 import User from "../models/userSchema.js";
 import { logger } from "../utils/logger.js";
 import ResponseHandler from "../utils/responseHandler.js";
+import { Parser } from "json2csv";
+import PDFDocument from "pdfkit";
+import moment from "moment-timezone";
 
-const dateParser = (date) => {
-  if (new Date(date).toString() === "Invalid Date") {
-    throw new Error(`${date} is Invalid Date`);
-  } else {
-    return new Date(date);
-  }
-};
+// const dateParser = (date) => {
+//   if (new Date(date).toString() === "Invalid Date") {
+//     throw new Error(`${date} is Invalid Date`);
+//   } else {
+//     return new Date(date);
+//   }
+// };
 
 export const createTask = async (req, res) => {
   try {
@@ -26,7 +29,10 @@ export const createTask = async (req, res) => {
     req.body.creator_id = creator._id;
 
     // Extract the ObjectId for user
-    const user = await User.findOne({ externalId: req.body.user }, { _id: 1 });
+    const user = await User.findOne(
+      { externalId: req.body.user },
+      { _id: 1, name: 1 }
+    );
     if (!user) {
       return ResponseHandler.error(res, "User not found", 404);
     }
@@ -35,7 +41,7 @@ export const createTask = async (req, res) => {
     // Extract the ObjectId for project
     const project = await Project.findOne(
       { projectName: req.body.project },
-      { _id: 1 }
+      { _id: 1, projectName: 1 }
     );
     if (!project) {
       return ResponseHandler.error(res, "Project not found", 404);
@@ -45,42 +51,46 @@ export const createTask = async (req, res) => {
     // Extract the ObjectId for service
     const service = await Service.findOne(
       { serviceName: req.body.service },
-      { _id: 1 }
+      { _id: 1, serviceName: 1 }
     );
+
     if (!service) {
       return ResponseHandler.error(res, "Service not found", 404);
     }
     req.body.service = service._id;
 
-    // Parsing Dates
-    req.body.date = dateParser(req.body.date);
-    req.body.startDate = dateParser(req.body.startDate);
-    req.body.finishDate = dateParser(req.body.finishDate);
-    req.body.startTime = dateParser(req.body.startTime);
-    req.body.finishTime = dateParser(req.body.finishTime);
+    // **Generate Slug Using Populated Names**
+    const slug =
+      `${user.name}-${project.projectName}-${service.serviceName}-${req.body.purpose}`
+        .toLowerCase()
+        .replace(/\s+/g, "-"); // Converts to lowercase and replaces spaces with hyphens
 
-    if (req.body.startDate > req.body.finishDate) {
+    // **Check if a task with the same slug already exists**
+    const existingTask = await Task.findOne({ slug });
+
+    if (existingTask && existingTask.status !== "Completed") {
       return ResponseHandler.error(
         res,
-        "Start Date cannot be greater than Finish Date",
-        400
-      );
-    } else if (req.body.startTime >= req.body.finishTime) {
-      return ResponseHandler.error(
-        res,
-        "Start Time cannot be greater than equal to Finish Time",
+        "A task with the same purpose already exists and is not completed.",
         400
       );
     }
 
-    // console.log("Req body", req.body);
+    // Assign slug to request body
+    req.body.slug = slug;
+
+    // Convert the startDate and startTime to IST format
+    // const startDate = moment(req.body.startDate).tz("Asia/Kolkata").toDate();
+    // // req.body.startTime = moment(req.body.startTime).tz("Asia/Kolkata").toDate();
+
+    // console.log(startDate);
 
     // Create the Task
     const task = await Task.create(req.body);
 
     return ResponseHandler.success(res, "Task created successfully", task, 201);
   } catch (error) {
-    logger.error("Error creating task:", error);
+    console.error("Error creating task:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };
@@ -91,6 +101,7 @@ export const getAllTasks = async (req, res) => {
     // const limit = parseInt(req.query.limit) || 10;
 
     const projectName = req.query.projectName;
+    const userName = req.query.userName;
 
     const filter = {};
 
@@ -100,6 +111,14 @@ export const getAllTasks = async (req, res) => {
         return ResponseHandler.error(res, "Project not found", 404);
       }
       filter.project = project._id;
+    }
+
+    if (userName) {
+      const user = await User.findOne({ name: userName }, { _id: 1 });
+      if (!user) {
+        return ResponseHandler.error(res, "User not found", 404);
+      }
+      filter.user = user._id;
     }
 
     const tasks = await Task.find(filter)
@@ -132,6 +151,30 @@ export const getAllTasks = async (req, res) => {
       200
     );
   } catch (error) {
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const getTaskByTaskId = async (req, res) => {
+  try {
+    const taskId = req.params.taskId;
+
+    const task = await Task.findById(taskId).populate(
+      "creator_id user project service"
+    );
+
+    if (!task) {
+      return ResponseHandler.error(res, "Task not found", 404);
+    }
+
+    return ResponseHandler.success(
+      res,
+      "Task retrieved successfully",
+      task,
+      200
+    );
+  } catch (error) {
+    logger.error("Error retrieving task:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };
@@ -303,6 +346,742 @@ export const getTasksByCreatorId = async (req, res) => {
       200
     );
   } catch (error) {
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const sendTaskForExcel = async (req, res) => {
+  // console.log("External ID:", req.externalId);
+  try {
+    const { userName } = req.query;
+
+    // if (!userName) {
+    //   return res.status(400).json({
+    //     statusCode: 400,
+    //     message: "UserName is required in the query",
+    //     exception: null,
+    //     data: null,
+    //   });
+    // }
+
+    // Find the user by userName
+    let user;
+    if (userName) {
+      user = await User.findOne({ name: userName }); // Find user by name
+    } else {
+      user = await User.findOne({ externalId: req.externalId });
+    }
+
+    if (!user) {
+      return ResponseHandler.error(res, "User not found", 404);
+    }
+
+    // Fetch only tasks assigned to the user
+    const tasks = await Task.find({ user: user._id }).populate(
+      "creator_id user project service"
+    ); // Populate references
+
+    if (!tasks.length) {
+      return ResponseHandler.error(res, "No tasks found for this user", 404);
+    }
+
+    // Convert timestamps to IST and format data
+    const tasksWithIST = tasks.map((task) => ({
+      "Creator Role": task.creator_role,
+      "Creator Name": task.creator_id.name,
+      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD"),
+      "Assigned User": user.name, // Directly from user object
+      Project: task.project?.projectName || "N/A",
+      Service: task.service?.serviceName || "N/A",
+      Purpose: task.purpose,
+      "Start Date": moment(task.startDate)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD"),
+      "Start Time": moment(task.startTime)
+        .tz("Asia/Kolkata")
+        .format("HH:mm:ss"),
+      "Finish Date": task.finishDate
+        ? moment(task.finishDate).tz("Asia/Kolkata").format("YYYY-MM-DD")
+        : "Pending",
+      "Finish Time": task.finishTime
+        ? moment(task.finishTime).tz("Asia/Kolkata").format("HH:mm:ss")
+        : "Pending",
+      Status: task.status,
+    }));
+
+    // Define CSV fields
+    const fields = [
+      "Creator Role",
+      "Creator Name",
+      "Date",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+
+    // Convert to CSV
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(tasksWithIST);
+
+    // Send file as response
+    res.attachment(`tasks_${user.name}.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error(error + "Error exporting tasks to CSV");
+    return ResponseHandler.error(
+      res,
+      "Error exporting tasks to CSV: " + error.message,
+      400
+    );
+  }
+};
+
+export const sendTaskForPDF = async (req, res) => {
+  try {
+    const { userName } = req.query;
+
+    // if (!userName) {
+    //   return res.status(400).json({
+    //     statusCode: 400,
+    //     message: "UserName is required in the query",
+    //     exception: null,
+    //     data: null,
+    //   });
+    // }
+
+    // Find user by name
+    let user;
+    if (userName) {
+      user = await User.findOne({ name: userName }); // Find user by name
+    } else {
+      user = await User.findOne({ externalId: req.externalId });
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "User not found",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Fetch tasks assigned to the user
+    const tasks = await Task.find({ user: user._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "No tasks found for this user",
+        exception: null,
+        data: null,
+      });
+    }
+
+    // Create PDF document
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+      layout: "landscape",
+    });
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tasks_${user.name}.pdf`
+    );
+    res.setHeader("Content-Type", "application/pdf");
+
+    doc.pipe(res); // Send PDF as response
+
+    // Title
+    doc
+      .fontSize(18)
+      .fillColor("#333333")
+      .text(`Task Report for ${user.name}`, { align: "center" })
+      .moveDown(1);
+
+    // Define Table Headers and Column Widths
+    const headers = [
+      "Creator",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+    const columnWidths = [80, 80, 80, 80, 120, 80, 50, 80, 70, 60];
+
+    let y = doc.y + 10; // Initial Y position for table
+
+    // Draw Table Headers with Background Color
+    doc
+      .rect(30, y, doc.page.width - 60, 25)
+      .fill("#007ACC")
+      .stroke();
+    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+    let x = 30;
+    headers.forEach((header, i) => {
+      doc.text(header, x + 5, y + 7, {
+        width: columnWidths[i],
+        align: "center",
+      });
+      x += columnWidths[i];
+    });
+
+    doc.fillColor("black").font("Helvetica").fontSize(9);
+    y += 25; // Move down for data rows
+
+    // Draw Table Rows with Dynamic Heights
+    tasks.forEach((task, index) => {
+      let x = 30;
+
+      const rowData = [
+        task.creator_id?.name || "N/A",
+        user.name,
+        task.project?.projectName || "N/A",
+        task.service?.serviceName || "N/A",
+        task.purpose,
+        moment(task.startDate).tz("Asia/Kolkata").format("DD/MM/YY"),
+        moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+        task.finishDate
+          ? moment(task.finishDate).tz("Asia/Kolkata").format("DD/MM/YY")
+          : "Pending",
+        task.finishTime
+          ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+          : "Pending",
+        task.status,
+      ];
+
+      // Determine the maximum row height based on text wrapping
+      let maxRowHeight = 0;
+      rowData.forEach((text, i) => {
+        let textHeight = doc.heightOfString(text, {
+          width: columnWidths[i] - 10,
+        });
+        maxRowHeight = Math.max(maxRowHeight, textHeight);
+      });
+
+      maxRowHeight += 10; // Add padding for readability
+
+      // Check for page overflow and add new page if needed
+      if (y + maxRowHeight > doc.page.height - 50) {
+        doc.addPage();
+        y = 50; // Reset Y position on new page
+
+        // Redraw the table headers on the new page
+        doc
+          .rect(30, y, doc.page.width - 60, 20)
+          .fill("#007ACC")
+          .stroke();
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+        let x = 30;
+        headers.forEach((header, i) => {
+          doc.text(header, x + 5, y + 7, {
+            width: columnWidths[i],
+            align: "center",
+          });
+          x += columnWidths[i];
+        });
+
+        doc.fillColor("black").font("Helvetica").fontSize(9);
+        y += 25; // Move down for data rows
+      }
+
+      // Alternate row colors for better readability
+      if (index % 2 === 0) {
+        doc
+          .rect(30, y, doc.page.width - 60, maxRowHeight)
+          .fill("#F3F3F3")
+          .stroke();
+      }
+
+      doc.fillColor("black");
+
+      // Draw Text in each column with adjusted row height
+      x = 30;
+      rowData.forEach((text, i) => {
+        doc.text(text, x + 5, y + 5, {
+          width: columnWidths[i] - 10,
+          align: "center",
+        });
+        x += columnWidths[i];
+      });
+
+      y += maxRowHeight; // Move down for the next row
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const continueTaskTomorrow = async (req, res) => {
+  try {
+    const { taskId } = req.body;
+
+    if (!taskId) {
+      return ResponseHandler.error(res, "Task ID is required", 400);
+    }
+
+    // Find the existing task by ID
+    const existingTask = await Task.findById(taskId);
+
+    if (existingTask.finishDate && existingTask.finishTime) {
+      return ResponseHandler.error(
+        res,
+        "This task is already frowarded to next day.",
+        400
+      );
+    }
+
+    if (!existingTask) {
+      return ResponseHandler.error(res, "Task not found", 404);
+    }
+
+    // Check if the startDate of the task is today or earlier
+    const taskStartDate = moment(existingTask.startDate)
+      .tz("Asia/Kolkata")
+      .format("YYYY-MM-DD");
+    const todayDate = moment().tz("Asia/Kolkata").format("YYYY-MM-DD");
+
+    if (taskStartDate > todayDate) {
+      return ResponseHandler.error(
+        res,
+        "This task is not for today. It cannot be continued.",
+        400
+      );
+    }
+
+    // **Use the slug from the existing task**
+    const { slug } = existingTask;
+
+    // Check if any task under the same module (slug) is already marked "Completed"
+    const isModuleCompleted = await Task.exists({
+      slug: slug,
+      status: "Completed",
+    });
+
+    if (isModuleCompleted) {
+      return ResponseHandler.error(
+        res,
+        "Another task in this module is already completed. This task cannot be continued.",
+        400
+      );
+    }
+
+    // Get the current date & time in IST
+    const currentDateTime = moment().tz("Asia/Kolkata");
+
+    // **Determine the next working day**
+    let nextDay = moment().tz("Asia/Kolkata").add(1, "day");
+
+    // If next day is Sunday → Move to Monday
+    if (nextDay.day() === 0) {
+      nextDay.add(1, "day");
+    }
+
+    // If next day is 1st or 3rd Saturday → Move to Monday
+    if (nextDay.day() === 6) {
+      const firstDayOfMonth = nextDay.clone().startOf("month");
+      const firstSaturday = firstDayOfMonth.clone().day(6);
+      if (firstSaturday.date() > 7) firstSaturday.add(7, "days"); // Ensure it's in the 1st week
+      const thirdSaturday = firstSaturday.clone().add(14, "days"); // 3rd Saturday
+
+      if (
+        nextDay.date() === firstSaturday.date() ||
+        nextDay.date() === thirdSaturday.date()
+      ) {
+        console.log("🚫 Next day is 1st or 3rd Saturday, skipping to Monday.");
+        nextDay.add(2, "days");
+      }
+    }
+
+    // Set start time for the next working day (9 AM IST)
+    const nextDayStartTime = nextDay
+      .clone()
+      .set({ hour: 10, minute: 30, second: 0 });
+
+    try {
+      // Update the existing task with finishDate & finishTime (Stored in UTC)
+      existingTask.finishDate = currentDateTime.utc().toISOString();
+      existingTask.finishTime = currentDateTime.utc().toISOString();
+      await existingTask.save(); // Save update
+
+      // Convert start time to UTC before storing
+      const nextDayStartTimeUTC = nextDayStartTime.utc().toISOString();
+
+      const newTask = new Task({
+        creator_role: existingTask.creator_role,
+        creator_id: existingTask.creator_id,
+        date: nextDayStartTimeUTC, // Set the correct start date
+        user: existingTask.user,
+        project: existingTask.project,
+        service: existingTask.service,
+        purpose: existingTask.purpose,
+        slug: slug,
+        startDate: nextDayStartTimeUTC,
+        startTime: nextDayStartTimeUTC,
+        finishDate: null,
+        finishTime: null,
+        status: "Ongoing",
+      });
+
+      await newTask.save(); // Create new task
+
+      return ResponseHandler.success(
+        res,
+        `Task successfully continued for ${nextDay.format("dddd")}`,
+        newTask,
+        200
+      );
+    } catch (error) {
+      console.error("Error while inserting new task, rolling back:", error);
+
+      // **Manual rollback: Undo finishDate & finishTime if new task creation fails**
+      existingTask.finishDate = null;
+      existingTask.finishTime = null;
+      await existingTask.save(); // Revert the update
+
+      return ResponseHandler.error(
+        res,
+        "Failed to continue task for the next working day. Changes were rolled back.",
+        400
+      );
+    }
+  } catch (error) {
+    console.error("Error in continuing task for the next working day:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const markTaskAsComplete = async (req, res) => {
+  try {
+    const { taskId } = req.body;
+
+    if (!taskId) {
+      return ResponseHandler.error(res, "Task ID is required.", 400);
+    }
+
+    // Find the task by ID
+    const existingTask = await Task.findById(taskId);
+
+    if (existingTask.finishDate && existingTask.finishTime) {
+      return ResponseHandler.error(
+        res,
+        "This task is already forwarded to next day.",
+        400
+      );
+    }
+
+    if (!existingTask) {
+      return ResponseHandler.error(res, "Task not found", 404);
+    }
+
+    // Ensure the task is still "Ongoing"
+    if (existingTask.status === "Completed") {
+      return ResponseHandler.error(
+        res,
+        "This task is already marked as completed.",
+        400
+      );
+    }
+
+    // **Use the slug from the existing task**
+    const { slug } = existingTask;
+
+    // Check if any other task under the same module (slug) is already "Completed"
+    const isModuleCompleted = await Task.exists({
+      slug: slug,
+      status: "Completed",
+    });
+
+    if (isModuleCompleted) {
+      return ResponseHandler.error(
+        res,
+        "Another task under this module is already completed. You cannot complete this task.",
+        400
+      );
+    }
+
+    // Get the current date & time in IST
+    const currentDateTime = moment().tz("Asia/Kolkata");
+
+    const taskStartDate = moment(existingTask.startDate).format("YYYY-MM-DD");
+    const todayDate = currentDateTime.format("YYYY-MM-DD");
+
+    console.log("Task Start Date:", taskStartDate);
+    console.log("Today's Date:", todayDate);
+
+    if (taskStartDate > todayDate) {
+      return ResponseHandler.error(
+        res,
+        "This task is not for today. It cannot be completed.",
+        400
+      );
+    }
+
+    // Mark only this task as "Completed"
+    existingTask.status = "Completed";
+    existingTask.finishDate = currentDateTime.toDate();
+    existingTask.finishTime = currentDateTime.toDate();
+    await existingTask.save();
+
+    return ResponseHandler.success(
+      res,
+      "Task marked as completed successfully",
+      existingTask,
+      200
+    );
+  } catch (error) {
+    console.error("Error marking task as complete:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+//  TODO Export Task By Project
+
+export const exportTaskCsvByProject = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    if (!projectName) {
+      return ResponseHandler.error(res, "Project name is required", 400);
+    }
+
+    // Find the project by name
+    const project = await Project.findOne({ projectName });
+
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+
+    // Fetch tasks associated with the project
+    const tasks = await Task.find({ project: project._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return ResponseHandler.error(res, "No tasks found for this project", 404);
+    }
+
+    // Convert timestamps to IST and format data
+    const tasksWithIST = tasks.map((task) => ({
+      "Creator Role": task.creator_role,
+      "Creator Name": task.creator_id.name,
+      Date: moment(task.date).tz("Asia/Kolkata").format("YYYY-MM-DD"),
+      "Assigned User": task.user.name,
+      Project: task.project?.projectName || "N/A",
+      Service: task.service?.serviceName || "N/A",
+      Purpose: task.purpose,
+      "Start Date": moment(task.startDate)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DD"),
+      "Start Time": moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+      "Finish Date": task.finishDate
+        ? moment(task.finishDate).tz("Asia/Kolkata").format("YYYY-MM-DD")
+        : "Pending",
+      "Finish Time": task.finishTime
+        ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+        : "Pending",
+      Status: task.status,
+    }));
+
+    // Define CSV fields
+    const fields = [
+      "Creator Role",
+      "Creator Name",
+      "Date",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+
+    // Convert to CSV
+    const json2csvParser = new Parser({ fields });
+    const csv = json2csvParser.parse(tasksWithIST);
+
+    // Send file as response
+    res.attachment(`tasks_${projectName}.csv`);
+    res.status(200).send(csv);
+  } catch (error) {
+    console.error("Error exporting tasks by project:", error);
+    return ResponseHandler.error(res, error.message, 400);
+  }
+};
+
+export const exportTaskPdfByProject = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    if (!projectName) {
+      return ResponseHandler.error(res, "Project name is required", 400);
+    }
+
+    // Find the project by name
+    const project = await Project.findOne({ projectName });
+
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+
+    // Fetch tasks associated with the project
+    const tasks = await Task.find({ project: project._id }).populate(
+      "creator_id user project service"
+    );
+
+    if (!tasks.length) {
+      return ResponseHandler.error(res, "No tasks found for this project", 404);
+    }
+    // Create PDF document
+    const doc = new PDFDocument({
+      margin: 30,
+      size: "A4",
+      layout: "landscape",
+    });
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=tasks_${projectName}.pdf`
+    );
+    res.setHeader("Content-Type", "application/pdf");
+    doc.pipe(res); // Send PDF as response
+    // Title
+    doc
+      .fontSize(18)
+      .fillColor("#333333")
+      .text(`Task Report for ${projectName}`, { align: "center" })
+      .moveDown(1);
+    // Define Table Headers and Column Widths
+    const headers = [
+      "Creator",
+      "Assigned User",
+      "Project",
+      "Service",
+      "Purpose",
+      "Start Date",
+      "Start Time",
+      "Finish Date",
+      "Finish Time",
+      "Status",
+    ];
+    const columnWidths = [80, 80, 80, 80, 120, 80, 50, 80, 70, 60];
+    let y = doc.y + 10; // Initial Y position for table
+    // Draw Table Headers with Background Color
+    doc
+      .rect(30, y, doc.page.width - 60, 25)
+      .fill("#007ACC")
+      .stroke();
+    doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+    let x = 30;
+    headers.forEach((header, i) => {
+      doc.text(header, x + 5, y + 7, {
+        width: columnWidths[i],
+        align: "center",
+      });
+      x += columnWidths[i];
+    });
+    doc.fillColor("black").font("Helvetica").fontSize(9);
+    y += 25; // Move down for data rows
+    // Draw Table Rows with Dynamic Heights
+
+    tasks.forEach((task, index) => {
+      let x = 30;
+
+      const rowData = [
+        task.creator_id?.name || "N/A",
+        task.user.name,
+        task.project?.projectName || "N/A",
+        task.service?.serviceName || "N/A",
+        task.purpose,
+        moment(task.startDate).tz("Asia/Kolkata").format("DD/MM/YY"),
+        moment(task.startTime).tz("Asia/Kolkata").format("LT"),
+        task.finishDate
+          ? moment(task.finishDate).tz("Asia/Kolkata").format("DD/MM/YY")
+          : "Pending",
+        task.finishTime
+          ? moment(task.finishTime).tz("Asia/Kolkata").format("LT")
+          : "Pending",
+        task.status,
+      ];
+
+      // Determine the maximum row height based on text wrapping
+      let maxRowHeight = 0;
+      rowData.forEach((text, i) => {
+        let textHeight = doc.heightOfString(text, {
+          width: columnWidths[i] - 10,
+        });
+        maxRowHeight = Math.max(maxRowHeight, textHeight);
+      });
+
+      maxRowHeight += 10; // Add padding for readability
+
+      // Check for page overflow and add new page if needed
+      if (y + maxRowHeight > doc.page.height - 50) {
+        doc.addPage();
+        y = 50; // Reset Y position on new page
+
+        // Redraw the table headers on the new page
+        doc
+          .rect(30, y, doc.page.width - 60, 20)
+          .fill("#007ACC")
+          .stroke();
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(10);
+
+        let x = 30;
+        headers.forEach((header, i) => {
+          doc.text(header, x + 5, y + 7, {
+            width: columnWidths[i],
+            align: "center",
+          });
+          x += columnWidths[i];
+        });
+
+        doc.fillColor("black").font("Helvetica").fontSize(9);
+        y += 25; // Move down for data rows
+      }
+
+      // Alternate row colors for better readability
+      if (index % 2 === 0) {
+        doc
+          .rect(30, y, doc.page.width - 60, maxRowHeight)
+          .fill("#F3F3F3")
+          .stroke();
+      }
+      doc.fillColor("black");
+      // Draw Text in each column with adjusted row height
+      x = 30;
+      rowData.forEach((text, i) => {
+        doc.text(text, x + 5, y + 5, {
+          width: columnWidths[i] - 10,
+          align: "center",
+        });
+        x += columnWidths[i];
+      });
+      y += maxRowHeight; // Move down for the next row
+    });
+    doc.end();
+  } catch (error) {
+    console.error("Error exporting tasks by project:", error);
     return ResponseHandler.error(res, error.message, 400);
   }
 };

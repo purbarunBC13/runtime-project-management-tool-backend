@@ -30,26 +30,48 @@ export const getTaskByStatus = async (req, res) => {
       return ResponseHandler.error(res, "User not found", 404);
     }
 
-    const tasks = await Task.aggregate([
-      { $match: { user: userId._id } },
+    const moduleStats = await Task.aggregate([
+      { $match: { user: userId._id } }, // Filter tasks by user
       {
         $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+          _id: "$slug", // Group by module (slug)
+          hasCompleted: {
+            $max: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] }, // 1 if at least one task is "Completed"
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          completedModules: {
+            $sum: { $cond: [{ $eq: ["$hasCompleted", 1] }, 1, 0] }, // Count modules as Completed
+          },
+          ongoingModules: {
+            $sum: { $cond: [{ $eq: ["$hasCompleted", 0] }, 1, 0] }, // Count modules as Ongoing
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          completedModules: 1,
+          ongoingModules: 1,
         },
       },
     ]);
 
-    const responsePayload = tasks.map((task) => ({
-      status: task._id,
-      count: task.count,
-      fill:
-        task._id === "completed"
-          ? "var(--color-completed)"
-          : task._id === "ongoing"
-          ? "var(--color-ongoing)"
-          : "var(--color-initiated)",
-    }));
+    const responsePayload = [
+      {
+        status: "Completed",
+        count: moduleStats[0].completedModules,
+        fill: "green",
+      },
+      {
+        status: "Ongoing",
+        count: moduleStats[0].ongoingModules,
+        fill: "red",
+      },
+    ];
 
     const totalTasks = responsePayload.reduce(
       (acc, curr) => acc + curr.count,
@@ -171,14 +193,46 @@ export const getWorkDurationByProject = async (req, res) => {
       },
       { $unwind: "$project" },
       {
+        $project: {
+          projectName: "$project.projectName",
+          startTime: {
+            $dateFromParts: {
+              year: 1970,
+              month: 1,
+              day: 1, // Placeholder Date
+              hour: { $hour: { $toDate: "$startTime" } },
+              minute: { $minute: { $toDate: "$startTime" } },
+              second: { $second: { $toDate: "$startTime" } },
+            },
+          },
+          finishTime: {
+            $cond: {
+              if: { $ne: ["$finishTime", null] },
+              then: {
+                $dateFromParts: {
+                  year: 1970,
+                  month: 1,
+                  day: 1, // Placeholder Date
+                  hour: { $hour: { $toDate: "$finishTime" } },
+                  minute: { $minute: { $toDate: "$finishTime" } },
+                  second: { $second: { $toDate: "$finishTime" } },
+                },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+      {
         $group: {
-          _id: "$project.projectName",
+          _id: "$projectName",
           totalDuration: {
             $sum: {
-              $subtract: [
-                { $toDate: "$finishTime" },
-                { $toDate: "$startTime" },
-              ],
+              $cond: {
+                if: { $ne: ["$finishTime", null] },
+                then: { $subtract: ["$finishTime", "$startTime"] },
+                else: 0,
+              },
             },
           },
         },

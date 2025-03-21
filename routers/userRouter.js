@@ -9,19 +9,11 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 
 const router = express.Router();
 
-router.get("/get-user", verifyToken, checkPermission("read_user"), getUser);
-router.get(
-  "/get-all-users",
-  verifyToken,
-  checkPermission("read_users"),
-  getAllUsers
-);
+router.use(verifyToken);
 
-router.get(
-  "/get-user-list",
-  verifyToken,
-  checkPermission("read_user"),
-  getAllUserList
-);
+router.get("/get-user", checkPermission("read_user"), getUser);
+router.get("/get-all-users", checkPermission("read_users"), getAllUsers);
+
+router.get("/get-user-list", checkPermission("read_user"), getAllUserList);
 
 export default router;

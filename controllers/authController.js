@@ -24,23 +24,25 @@ export const loginUser = async (req, res) => {
       });
 
       console.log("Existing user:", response.data);
+
+      const newUserPayload = {
+        externalId: response.data.id,
+        roleId: response.data.role_id,
+        roleName: response.data.role_id === 1 ? "Admin" : "User",
+        officeId: response.data.office_id,
+        officeName: response.data.office_name || null,
+        departmentId: response.data.department_id || null,
+        departmentName: response.data.department_name || null,
+        designation: response.data.designation || null,
+        email: response.data.email || null,
+        name: response.data.name || null,
+        dob: response.data.dob || null,
+        gender: response.data.gender,
+        mobile: response.data.mobile || 123,
+        profilePic: response.data.profilepic || null,
+      };
+
       if (!existingUser) {
-        const newUserPayload = {
-          externalId: response.data.id,
-          roleId: response.data.role_id,
-          roleName: response.data.role_id === 1 ? "Admin" : "User",
-          officeId: response.data.office_id,
-          officeName: response.data.office_name || null,
-          departmentId: response.data.department_id || null,
-          departmentName: response.data.department_name || null,
-          designation: response.data.designation || null,
-          email: response.data.email || null,
-          name: response.data.name || null,
-          dob: response.data.dob || null,
-          gender: response.data.gender,
-          mobile: response.data.mobile || 123,
-          profilePic: response.data.profilepic || null,
-        };
         console.log("New user payload:", newUserPayload);
         try {
           await User.create(newUserPayload);
@@ -54,14 +56,63 @@ export const loginUser = async (req, res) => {
           );
         }
       } else {
-        logger.info("User already exists in the database");
+        if (
+          existingUser.name === newUserPayload.name &&
+          existingUser.gender === newUserPayload.gender &&
+          existingUser.dob === newUserPayload.dob &&
+          existingUser.mobile === newUserPayload.mobile &&
+          existingUser.address === newUserPayload.address &&
+          existingUser.profilePic === newUserPayload.profilePic
+        ) {
+          logger.info("User already exists in the database");
+        } else {
+          try {
+            await User.findOneAndUpdate(
+              { externalId: existingUser.externalId },
+              {
+                name:
+                  newUserPayload.name === null
+                    ? existingUser.name
+                    : newUserPayload.name,
+                gender:
+                  newUserPayload.gender === null
+                    ? existingUser.gender
+                    : newUserPayload.gender,
+                dob:
+                  newUserPayload.dob === null
+                    ? existingUser.dob
+                    : newUserPayload.dob,
+                mobile:
+                  newUserPayload.mobile === null
+                    ? existingUser.mobile
+                    : newUserPayload.mobile,
+                address:
+                  newUserPayload.address === null
+                    ? existingUser.address
+                    : newUserPayload.address,
+                profilePic:
+                  newUserPayload.profilePic === null
+                    ? existingUser.profilePic
+                    : newUserPayload.profilePic,
+              }
+            );
+            logger.info("New user created in the database");
+          } catch (createError) {
+            console.log("Error creating user:", createError);
+            return ResponseHandler.error(
+              res,
+              "Failed to save user in the database",
+              500
+            );
+          }
+          logger.info("Updated user in the database");
+        }
       }
 
-      // TODO: Check if this works in localhost
       res.cookie("auth_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Secure only in production
-        sameSite: process.env.NODE_ENV === "production" ? "None" : "lax", // Adjust for development
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
         maxAge: maxAge,
       });
 

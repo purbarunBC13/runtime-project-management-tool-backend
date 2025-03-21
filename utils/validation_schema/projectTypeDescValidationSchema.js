@@ -15,8 +15,8 @@ export const projectTypeDescValidationSchema = z.object({
     .min(5, {
       message: "Project Type Description must be at least 5 characters long",
     })
-    .max(100, {
-      message: "Project Type Description must be at most 100 characters long",
+    .max(10000, {
+      message: "Project Type Description must be at most 10000 characters long",
     })
     .nonempty({
       message: "Project Type Description cannot be empty",

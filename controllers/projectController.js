@@ -1,10 +1,13 @@
 import Project from "../models/projectSchema.js";
+import ProjectTypeDesc from "../models/projectTypeDescSchema.js";
+import Service from "../models/serviceSchema.js";
+import Task from "../models/taskSchema.js";
 import { logger } from "../utils/logger.js";
 import ResponseHandler from "../utils/responseHandler.js";
 
 export const createProject = async (req, res) => {
   try {
-    const projectName = req.body.projectName;
+    const projectName = req.body.projectName.trim();
     const projectExists = await Project.findOne({ projectName });
     if (projectExists) {
       return ResponseHandler.error(
@@ -13,7 +16,8 @@ export const createProject = async (req, res) => {
         400
       );
     }
-    const project = await Project.create(req.body);
+    const projectData = { ...req.body, projectName };
+    const project = await Project.create(projectData);
     // logger.info(`Project created: ${project}`);
     return ResponseHandler.success(
       res,
@@ -118,14 +122,83 @@ export const getAllProjects = async (req, res) => {
       limit,
     };
 
+    const services = await Service.find({
+      project: { $in: projects.map((project) => project._id) },
+    });
+
+    const typeDesc = await ProjectTypeDesc.find({
+      project: { $in: projects.map((project) => project._id) },
+    }).populate("project");
+
+    // Put each service to its project
+    const projectsWithServices = projects.map((project) => {
+      const projectServices = services.filter(
+        (service) => service.project.toString() === project._id.toString()
+      );
+      const projectTypeDesc = typeDesc.filter(
+        (typeDesc) => typeDesc.project._id.toString() === project._id.toString()
+      );
+      // console.log("projectServices", projectServices);
+      return {
+        ...project.toObject(),
+        services: projectServices.map((service) => service.serviceName),
+        projectTypeDesc: projectTypeDesc.map(
+          (typeDesc) => typeDesc.projectTypeDescription
+        ),
+      };
+    });
+
+    // console.log("projectsWithServices", projectsWithServices);
+
     return ResponseHandler.success(
       res,
       "All Projects",
-      { projects, paginationData },
+      { projects: projectsWithServices, paginationData },
       200
     );
   } catch (error) {
     logger.error("Error getting projects:", error);
     return ResponseHandler.error(res, "Failed to get projects", 500, error);
+  }
+};
+
+export const deleteProject = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    if (!project) {
+      return ResponseHandler.error(res, "Project not found", 404);
+    }
+    const tasksWithproject = await Task.find({ project: project._id });
+    if (tasksWithproject.length) {
+      return ResponseHandler.error(
+        res,
+        "Cannot delete project with associated tasks",
+        400
+      );
+    }
+    const servicesWithProject = await Service.find({ project: project._id });
+    if (servicesWithProject.length) {
+      return ResponseHandler.error(
+        res,
+        "Cannot delete project with associated services",
+        400
+      );
+    }
+
+    const projectTypeDescWithProject = await ProjectTypeDesc.find({
+      project: project._id,
+    });
+    if (projectTypeDescWithProject.length) {
+      return ResponseHandler.error(
+        res,
+        "Cannot delete project with associated project type descriptions",
+        400
+      );
+    }
+    await project.deleteOne();
+    return ResponseHandler.success(res, "Project deleted successfully", 200);
+  } catch (error) {
+    logger.error("Error deleting project:", error);
+    return ResponseHandler.error(res, "Failed to delete project", 500, error);
   }
 };

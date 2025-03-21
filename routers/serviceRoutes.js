@@ -5,32 +5,38 @@ import { checkPermission } from "../middlewares/checkPermissionMiddleware.js";
 
 import {
   createService,
+  deleteService,
   getAllServices,
   getServicesByProjectName,
 } from "../controllers/serviceController.js";
 
 const serviceRouter = express.Router();
 
+serviceRouter.use(verifyToken);
+
 serviceRouter.post(
   "/create",
-  verifyToken,
   checkPermission("create_services"),
   serviceValidation,
   createService
 );
-
 serviceRouter.get(
-  "/all",
-  verifyToken,
+  "/get-by-project",
   checkPermission("read_services"),
-  getAllServices
+  getServicesByProjectName
 );
+serviceRouter.get("/all", checkPermission("read_services"), getAllServices);
 
 serviceRouter.get(
   "/get-by-project/:projectName",
-  verifyToken,
   checkPermission("read_services"),
   getServicesByProjectName
+);
+
+serviceRouter.delete(
+  "/delete/:serviceId",
+  checkPermission("delete_services"),
+  deleteService
 );
 
 export default serviceRouter;
