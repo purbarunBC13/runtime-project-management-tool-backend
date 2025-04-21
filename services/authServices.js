@@ -4,9 +4,8 @@ import { logger } from "../utils/logger.js";
 export const loginService = async (credentials) => {
   const AUTH_SERVICE_BASE_URL = process.env.AUTH_SERVICE_BASE_URL;
   try {
-    const response = await axios.post(
-      `${AUTH_SERVICE_BASE_URL}/login`,
-      credentials
+    const response = await axios.get(
+      `${AUTH_SERVICE_BASE_URL}/${credentials.user_id}`
     );
     return response.data;
   } catch (error) {
