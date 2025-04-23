@@ -6,7 +6,7 @@ import User from "../models/userSchema.js";
 const maxAge = 24 * 60 * 60 * 1000;
 export const loginUser = async (req, res) => {
   try {
-    const response = await loginService(req.body);
+    const response = await loginService(req.params.user_id);
 
     if (response.status === 200) {
       const userPayload = {
