@@ -8,7 +8,7 @@ export const getUserService = async (userId) => {
   };
   try {
     const response = await axios.post(
-      `https://attendance.runtime-solutions.net/attandance/public/api/v2/get_profile_details`,
+      `${AUTH_SERVICE_BASE_URL}/get_profile_details`,
       payload
     );
     return response.data;
