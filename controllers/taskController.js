@@ -277,10 +277,31 @@ export const getTasksByUserId = async (req, res) => {
 
     filter.user = user._id;
 
-    const totalTasks = await Task.find(filter)
+    // Generate and update slug for tasks without a slug
+    const allTask = await Task.find(filter)
       .populate("creator_id user project service")
       .sort(sortOptions);
 
+    const tasksToUpdate = allTask.filter((task) => !task.slug);
+    for (const task of tasksToUpdate) {
+      const slug = [
+        task.user?.name,
+        task.project?.projectName,
+        task.service?.serviceName,
+        task.purpose,
+      ]
+        .filter(Boolean) // Remove undefined or null values
+        .join("-")
+        .toLowerCase()
+        .replace(/\s+/g, "-"); // Replace spaces with hyphens
+
+      task.slug = slug;
+      await task.save();
+    }
+
+    const totalTasks = await Task.find(filter)
+      .populate("creator_id user project service")
+      .sort(sortOptions);
     const tasks = totalTasks.slice(limit * (page - 1), limit * page);
 
     if (tasks.length === 0) {
